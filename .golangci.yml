@@ -1,0 +1,222 @@
+# DDD + Clean Architecture の golangci-lint 設定（v1.64.x / Go 1.24.3）
+# Based on: https://github.com/maratori/golangci-lint-config
+
+run:
+  timeout: 5m
+
+linters-settings:
+  forbidigo:
+    forbid:
+      - p: 'Subscribe\("[a-z]'
+        msg: "イベント名をハードコーディングしないでください。order.EventTypeOrderConfirmed 等の定数を使ってください"
+      - pattern: 'http\.Error\('
+        msg: "http.Error() は禁止。writeError() を使うこと"
+
+  depguard:
+    rules:
+      # domain 層は何にも依存しない（最内層）
+      domain-layer:
+        list-mode: lax
+        files:
+          - "**/domain/**"
+        deny:
+          - pkg: "mendo/internal/infrastructure"
+            desc: "domain 層は infrastructure に依存してはいけない"
+          - pkg: "mendo/internal/application"
+            desc: "domain 層は application に依存してはいけない"
+          - pkg: "mendo/internal/interface"
+            desc: "domain 層は interface 層に依存してはいけない"
+          - pkg: "mendo/internal/di"
+            desc: "domain 層は di に依存してはいけない"
+          - pkg: "database/sql"
+            desc: "domain 層は DB パッケージを直接使わない"
+          - pkg: "net/http"
+            desc: "domain 層は HTTP パッケージを直接使わない"
+
+      # application 層は domain のみ依存可能
+      application-layer:
+        list-mode: lax
+        files:
+          - "**/application/**"
+        deny:
+          - pkg: "mendo/internal/infrastructure"
+            desc: "application 層は infrastructure に直接依存してはいけない"
+          - pkg: "mendo/internal/interface"
+            desc: "application 層は interface 層に依存してはいけない"
+          - pkg: "mendo/internal/di"
+            desc: "application 層は di に依存してはいけない"
+          - pkg: "database/sql"
+            desc: "application 層は DB パッケージを直接使わない"
+          - pkg: "net/http"
+            desc: "application 層は HTTP パッケージを直接使わない"
+
+      # kitchen/domain は order/domain を直接参照しない（contract/ 経由のみ）
+      # NOTE: 現状 kitchen.go が order.OrderID を参照しているため domain/kitchen/ は適用保留。
+      #       application/command/kitchen/ は contract/ 経由で OrderConfirmedPublic を受け取る設計に移行済み。
+      kitchen-application:
+        list-mode: lax
+        files:
+          - "**/application/command/kitchen/**"
+        deny:
+          - pkg: "mendo/internal/domain/order"
+            desc: "Kitchen BC の application 層は Order BC の domain を直接参照してはいけない。contract/ を使う（order.OrderID の型変換のみ暫定例外）"
+
+      # repository は datasource IF 経由のみ。mysql を直接 import 禁止
+      repository-layer:
+        list-mode: lax
+        files:
+          - "**/infrastructure/repository/**"
+        deny:
+          - pkg: "mendo/internal/infrastructure/mysql"
+            desc: "repository は datasource IF 経由で DB にアクセスする。mysql を直接 import しない"
+          - pkg: "mendo/internal/infrastructure/datasource/mysql"
+            desc: "repository は datasource IF に依存する。MySQL 実装に直接依存しない"
+          - pkg: "database/sql"
+            desc: "repository は SQL を知らない"
+
+      # datasource はドメイン型を import 禁止
+      datasource-layer:
+        list-mode: lax
+        files:
+          - "**/infrastructure/datasource/**"
+        deny:
+          - pkg: "mendo/internal/domain"
+            desc: "datasource はドメインモデルを知らない。DTO のみ扱う"
+          - pkg: "mendo/internal/domain/kitchen"
+            desc: "datasource はドメインモデルを知らない"
+          - pkg: "mendo/internal/domain/menu"
+            desc: "datasource はドメインモデルを知らない"
+          - pkg: "mendo/internal/domain/order"
+            desc: "datasource はドメインモデルを知らない"
+          - pkg: "mendo/internal/domain/specialorder"
+            desc: "datasource はドメインモデルを知らない"
+
+      # interface 層は infrastructure に依存しない
+      interface-layer:
+        list-mode: lax
+        files:
+          - "**/interface/**"
+        deny:
+          - pkg: "mendo/internal/infrastructure"
+            desc: "interface 層は infrastructure に直接依存してはいけない"
+          - pkg: "database/sql"
+            desc: "interface 層は DB パッケージを直接使わない"
+
+  errcheck:
+    check-type-assertions: true
+
+  errorlint:
+    errorf: true
+    asserts: true
+    comparison: true
+
+  gocyclo:
+    min-complexity: 20
+
+  gocognit:
+    min-complexity: 20
+
+  funlen:
+    lines: 80
+    statements: 50
+
+  gocritic:
+    enabled-tags:
+      - diagnostic
+      - style
+      - performance
+
+  gosec:
+    severity: medium
+    confidence: medium
+
+  govet:
+    enable-all: true
+    disable:
+      - fieldalignment
+      - shadow
+
+  misspell:
+    locale: US
+
+  revive:
+    severity: error
+    rules:
+      - name: exported
+        disabled: true
+      - name: unexported-return
+        disabled: true
+
+  staticcheck:
+    checks:
+      - all
+      - "-SA1019"
+
+linters:
+  disable-all: true
+  enable:
+    - errcheck
+    - govet
+    - staticcheck
+    - unused
+    - ineffassign
+    - bodyclose
+    - nilerr
+    - errorlint
+    - gosec
+    - gocritic
+    - revive
+    - unconvert
+    - unparam
+    - wastedassign
+    - prealloc
+    - gocyclo
+    - gocognit
+    - funlen
+    - misspell
+    - dupword
+    - whitespace
+    - asciicheck
+    - depguard
+    # DDD 追加
+    - gochecknoglobals  # グローバル変数禁止（domain 層の状態管理を防ぐ）
+    - noctx             # context なしの HTTP/DB 呼び出し検知
+    - ireturn           # IF を返す関数を検知（具体型を返すイディオム強制）
+    - wrapcheck          # 外部パッケージのエラーを wrap してるかチェック
+    - forbidigo           # ハードコーディング禁止パターン
+
+issues:
+  exclude-rules:
+    - path: _test\.go
+      linters:
+        - errcheck
+        - gosec
+        - gocritic
+        - unparam
+        - funlen
+    # ドメインイベントは値渡しで使う設計（イミュータブル）
+    - linters:
+        - gocritic
+      text: "hugeParam"
+      path: "(event|events)\\.go"
+    # application 層のイベントハンドラ引数も値渡し
+    - linters:
+        - gocritic
+      text: "hugeParam"
+      path: "application/"
+    - path: _test\.go
+      linters:
+        - ireturn
+    # Wire の providerSet はグローバル変数だが意図的
+    - path: "di/"
+      linters:
+        - gochecknoglobals
+    - path: _test\.go
+      linters:
+        - wrapcheck
+    # kitchen/application は AddCookingTask(order.OrderID) 等のシグネチャに合わせるため
+    # order を import している。kitchen domain が order.OrderID を参照している既存問題の影響。
+    # kitchen domain の OrderID 独自型化（別チケット）後にこの除外を削除し、depguard を有効化する。
+    - path: "application/command/kitchen/"
+      linters:
+        - depguard
