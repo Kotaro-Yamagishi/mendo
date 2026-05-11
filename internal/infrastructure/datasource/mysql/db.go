@@ -1,8 +1,11 @@
 package mysql
 
 import (
+	"bytes"
 	"context"
 	"database/sql"
+	"encoding/json"
+	"fmt"
 )
 
 // txKey はコンテキストにトランザクションを格納するキー。
@@ -24,4 +27,14 @@ func getConn(ctx context.Context, db *sql.DB) conn {
 		return tx
 	}
 	return db
+}
+
+// compactJSON は MySQL の JSON カラムから返る空白付き JSON を空白なしに正規化する。
+// MySQL は JSON カラムの値を {"key": "value"} 形式で返すため、
+// テスト等で {"key":"value"} と比較する際に不一致が起きる。
+func compactJSON(buf *bytes.Buffer, src []byte) error {
+	if err := json.Compact(buf, src); err != nil {
+		return fmt.Errorf("json compact: %w", err)
+	}
+	return nil
 }

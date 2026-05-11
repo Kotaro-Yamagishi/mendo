@@ -1,6 +1,7 @@
 package mysql
 
 import (
+	"bytes"
 	"context"
 	"database/sql"
 	"fmt"
@@ -33,6 +34,7 @@ func (p *OrderProjectionDataSource) FindOrderProjectionByID(ctx context.Context,
 	c := getConn(ctx, p.db)
 
 	var row datasource.OrderProjectionRow
+	var itemsRaw []byte
 	err := c.QueryRowContext(ctx,
 		`SELECT order_id, seat_no, items, total, status, created_at, updated_at
 		   FROM oc_order_projections
@@ -41,7 +43,7 @@ func (p *OrderProjectionDataSource) FindOrderProjectionByID(ctx context.Context,
 	).Scan(
 		&row.OrderID,
 		&row.SeatNo,
-		&row.Items,
+		&itemsRaw,
 		&row.Total,
 		&row.Status,
 		&row.CreatedAt,
@@ -53,6 +55,11 @@ func (p *OrderProjectionDataSource) FindOrderProjectionByID(ctx context.Context,
 	if err != nil {
 		return nil, fmt.Errorf("find order projection by id: %w", err)
 	}
+	var buf bytes.Buffer
+	if err := compactJSON(&buf, itemsRaw); err != nil {
+		return nil, fmt.Errorf("compact items json: %w", err)
+	}
+	row.Items = buf.String()
 	return &row, nil
 }
 
@@ -73,10 +80,11 @@ func (p *OrderProjectionDataSource) FindAllOrderProjections(ctx context.Context)
 	var result []datasource.OrderProjectionRow
 	for rows.Next() {
 		var row datasource.OrderProjectionRow
+		var itemsRaw []byte
 		if err := rows.Scan(
 			&row.OrderID,
 			&row.SeatNo,
-			&row.Items,
+			&itemsRaw,
 			&row.Total,
 			&row.Status,
 			&row.CreatedAt,
@@ -84,6 +92,11 @@ func (p *OrderProjectionDataSource) FindAllOrderProjections(ctx context.Context)
 		); err != nil {
 			return nil, fmt.Errorf("scan order projection: %w", err)
 		}
+		var buf bytes.Buffer
+		if err := compactJSON(&buf, itemsRaw); err != nil {
+			return nil, fmt.Errorf("compact items json: %w", err)
+		}
+		row.Items = buf.String()
 		result = append(result, row)
 	}
 	if err := rows.Err(); err != nil {

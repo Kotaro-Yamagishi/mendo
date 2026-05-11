@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"time"
 
 	"mendo/internal/domain/kitchen"
 	"mendo/internal/domain/order"
@@ -63,14 +64,42 @@ func (r *KitchenRepository) FindByID(ctx context.Context, id kitchen.KitchenID) 
 }
 
 // Save は Kitchen を永続化する。
-// DomainEvents に CookingCompleted があれば対応タスクのステータスを更新する。
+// 全タスクを INSERT IGNORE で保存し、DomainEvents に CookingCompleted があれば対応タスクのステータスを更新する。
 func (r *KitchenRepository) Save(ctx context.Context, k *kitchen.Kitchen) error {
 	kitchenRow := &datasource.KitchenRow{
 		KitchenID:   k.ID().String(),
 		MaxCapacity: kitchen.MaxConcurrentTasks,
+		CreatedAt:   time.Now().UTC(),
 	}
 	if err := r.ds.UpsertKitchen(ctx, kitchenRow); err != nil {
 		return fmt.Errorf("KitchenRepository.Save UpsertKitchen: %w", err)
+	}
+
+	// 全タスクを INSERT IGNORE（既存行は無視）
+	for _, task := range k.Tasks() {
+		instrDTOs := make([]datasource.CookingInstructionDTO, len(task.Instructions()))
+		for i, instr := range task.Instructions() {
+			instrDTOs[i] = datasource.CookingInstructionDTO{
+				MenuName: instr.MenuName,
+				Toppings: instr.Toppings,
+				Hardness: instr.Hardness,
+			}
+		}
+		instrJSON, err := json.Marshal(instrDTOs)
+		if err != nil {
+			return fmt.Errorf("KitchenRepository.Save marshal instructions: %w", err)
+		}
+		taskRow := &datasource.CookingTaskRow{
+			TaskID:      string(task.ID()),
+			KitchenID:   k.ID().String(),
+			OrderID:     string(task.OrderID()),
+			Status:      taskStatusToString(kitchen.TaskStatus(task.Status())),
+			Instructions: string(instrJSON),
+			StartedAt:   task.CreatedAt().UTC(),
+		}
+		if err := r.ds.InsertCookingTask(ctx, taskRow); err != nil {
+			return fmt.Errorf("KitchenRepository.Save InsertCookingTask: %w", err)
+		}
 	}
 
 	// DomainEvents から CookingCompleted を検出してタスクステータスを更新
@@ -83,6 +112,17 @@ func (r *KitchenRepository) Save(ctx context.Context, k *kitchen.Kitchen) error 
 	}
 
 	return nil
+}
+
+func taskStatusToString(s kitchen.TaskStatus) string {
+	switch s {
+	case kitchen.TaskCooking:
+		return "cooking"
+	case kitchen.TaskCompleted:
+		return "completed"
+	default:
+		return "pending"
+	}
 }
 
 func taskStatusFromString(s string) int {

@@ -3,6 +3,7 @@ package repository
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"mendo/internal/domain/specialorder"
 	"mendo/internal/infrastructure/datasource"
@@ -32,12 +33,15 @@ func (r *SpecialOrderRepository) FindByID(ctx context.Context, id specialorder.S
 
 // Save は SpecialOrder を SpecialOrderRow に変換して永続化する。
 func (r *SpecialOrderRepository) Save(ctx context.Context, so *specialorder.SpecialOrder) error {
+	now := time.Now().UTC()
 	row := &datasource.SpecialOrderRow{
 		ID:            so.ID().String(),
 		OrderID:       so.OrderID(),
 		MenuName:      so.MenuName(),
 		Status:        int(so.Status()),
 		SuggestedMenu: so.SuggestedMenu(),
+		CreatedAt:     now,
+		UpdatedAt:     now,
 	}
 	if err := r.ds.UpsertSpecialOrder(ctx, row); err != nil {
 		return fmt.Errorf("SpecialOrderRepository.Save: %w", err)

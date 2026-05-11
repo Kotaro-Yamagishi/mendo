@@ -1,6 +1,7 @@
 package mysql
 
 import (
+	"bytes"
 	"context"
 	"database/sql"
 	"fmt"
@@ -66,19 +67,25 @@ func (ds *MySQLEventStoreDataSource) FindEventsByAggregateID(ctx context.Context
 	var result []datasource.EventRow
 	for rows.Next() {
 		var row datasource.EventRow
+		var payloadRaw []byte
 		if err := rows.Scan(
 			&row.EventID,
 			&row.AggregateID,
 			&row.AggregateType,
 			&row.EventType,
 			&row.Version,
-			&row.Payload,
+			&payloadRaw,
 			&row.CorrelationID,
 			&row.CausationID,
 			&row.CreatedAt,
 		); err != nil {
 			return nil, fmt.Errorf("scan event: %w", err)
 		}
+		var buf bytes.Buffer
+		if err := compactJSON(&buf, payloadRaw); err != nil {
+			return nil, fmt.Errorf("compact payload json: %w", err)
+		}
+		row.Payload = buf.String()
 		result = append(result, row)
 	}
 	if err := rows.Err(); err != nil {

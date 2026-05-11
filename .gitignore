@@ -9,6 +9,7 @@ mendo
 *.swp
 *.swo
 *~
+.claude/settings.local.json
 
 # OS
 .DS_Store
@@ -16,6 +17,7 @@ Thumbs.db
 
 # Go
 vendor/
+coverage.out
 
 # Environment
 .env

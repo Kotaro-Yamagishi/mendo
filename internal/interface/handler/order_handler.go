@@ -12,7 +12,7 @@ import (
 // ユースケースを呼ぶだけ。業務ロジックは持たない。
 type OrderHandler struct {
 	createUC     *ordercommand.CreateOrderUsecase
-	confirmUC    *ordercommand.ConfirmOrderUsecase
+	confirmUC    *ordercommand.ConfirmOrderESUsecase
 	cancelUC     *ordercommand.CancelOrderUsecase
 	waitTimeUC   *orderquery.EstimateWaitTimeUsecase
 	listOrdersUC *orderquery.ListOrdersUsecase
@@ -20,7 +20,7 @@ type OrderHandler struct {
 
 func NewOrderHandler(
 	createUC *ordercommand.CreateOrderUsecase,
-	confirmUC *ordercommand.ConfirmOrderUsecase,
+	confirmUC *ordercommand.ConfirmOrderESUsecase,
 	cancelUC *ordercommand.CancelOrderUsecase,
 	waitTimeUC *orderquery.EstimateWaitTimeUsecase,
 	listOrdersUC *orderquery.ListOrdersUsecase,

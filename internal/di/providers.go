@@ -106,15 +106,17 @@ var usecaseSet = wire.NewSet(
 func provideCreateOrderUsecase(
 	es domain.EventStore,
 	ob *repository.InMemoryOutbox,
+	pub domain.EventPublisher,
 ) *ordercommand.CreateOrderUsecase {
-	return ordercommand.NewCreateOrderUsecase(es, ob)
+	return ordercommand.NewCreateOrderUsecase(es, ob, pub)
 }
 
 func provideConfirmOrderUsecase(
 	es domain.EventStore,
 	ob *repository.InMemoryOutbox,
-) *ordercommand.ConfirmOrderUsecase {
-	return ordercommand.NewConfirmOrderUsecase(es, ob)
+	pub domain.EventPublisher,
+) *ordercommand.ConfirmOrderESUsecase {
+	return ordercommand.NewConfirmOrderESUsecase(es, ob, pub)
 }
 
 func provideCancelOrderUsecase(

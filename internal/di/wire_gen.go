@@ -64,8 +64,8 @@ func InitializeApp(kitchenID kitchen.KitchenID, eventBus domain.EventPublisher, 
 	var dlq domain.DeadLetterQueue = dlqStore
 
 	// --- アプリケーション層: ユースケース（ES版）---
-	createOrderUsecase := provideCreateOrderUsecase(eventStore, inMemoryOutbox)
-	confirmOrderUsecase := provideConfirmOrderUsecase(eventStore, inMemoryOutbox)
+	createOrderUsecase := provideCreateOrderUsecase(eventStore, inMemoryOutbox, eventBus)
+	confirmOrderESUsecase := provideConfirmOrderUsecase(eventStore, inMemoryOutbox, eventBus)
 	cancelOrderUsecase := provideCancelOrderUsecase(eventStore, inMemoryOutbox)
 	completeCookingUsecase := provideCompleteCookingUsecase(inMemoryKitchenRepository, inMemoryOutbox, txManager, kitchenID)
 	estimateWaitTimeUsecase := provideEstimateWaitTimeUsecase(waitTimeCalculator, kitchenID)
@@ -91,7 +91,7 @@ func InitializeApp(kitchenID kitchen.KitchenID, eventBus domain.EventPublisher, 
 	importStatusHandler := importstatus.NewImportStatusHandler(jobStore)
 
 	// --- インターフェース層: ハンドラ ---
-	orderHandler := handler.NewOrderHandler(createOrderUsecase, confirmOrderUsecase, cancelOrderUsecase, estimateWaitTimeUsecase, listOrdersUsecase)
+	orderHandler := handler.NewOrderHandler(createOrderUsecase, confirmOrderESUsecase, cancelOrderUsecase, estimateWaitTimeUsecase, listOrdersUsecase)
 	kitchenHandler := handler.NewKitchenHandler(completeCookingUsecase)
 	menuHandler := handler.NewMenuHandler(soldOutMenuUsecase)
 	dlqHandler := handler.NewDLQHandler(listDLQHandler, retryDLQUsecase)

@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/google/uuid"
 	"mendo/internal/domain"
 	"mendo/internal/domain/kitchen"
 	"mendo/internal/domain/order"
@@ -24,6 +25,19 @@ func NewEventStoreRepository(ds datasource.EventStoreDataSource) *EventStoreRepo
 
 // Save はイベント列を EventRow に変換して永続化する。
 func (r *EventStoreRepository) Save(ctx context.Context, events []domain.Event) error {
+	if len(events) == 0 {
+		return nil
+	}
+
+	// 既存イベント数を取得して version のオフセットにする。
+	// 2回目以降の Save で version が 0 からリセットされる問題を防ぐ。
+	aggregateID := events[0].GetAggregateID()
+	existing, err := r.ds.FindEventsByAggregateID(ctx, aggregateID)
+	if err != nil {
+		return fmt.Errorf("EventStoreRepository.Save load existing: %w", err)
+	}
+	versionOffset := len(existing)
+
 	rows := make([]datasource.EventRow, 0, len(events))
 	for i, event := range events {
 		payload, err := marshalEvent(event)
@@ -31,11 +45,12 @@ func (r *EventStoreRepository) Save(ctx context.Context, events []domain.Event) 
 			return fmt.Errorf("EventStoreRepository.Save marshal[%d]: %w", i, err)
 		}
 		rows = append(rows, datasource.EventRow{
+			EventID:       uuid.New().String(),
 			AggregateID:   event.GetAggregateID(),
 			EventType:     event.GetEventType(),
 			CorrelationID: event.GetCorrelationID(),
 			Payload:       string(payload),
-			Version:       i,
+			Version:       versionOffset + i,
 			CreatedAt:     time.Now().UTC(),
 		})
 	}

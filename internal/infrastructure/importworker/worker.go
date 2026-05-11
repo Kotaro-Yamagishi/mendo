@@ -71,7 +71,9 @@ func (w *Worker) processJob(ctx context.Context, job *importjob.Job) {
 	}
 
 	// チャンク分割して並列処理
+	// existingNames は複数 goroutine から読み書きされるため mutex で保護する。
 	rows := job.Rows
+	var mu sync.RWMutex
 	var wg sync.WaitGroup
 	for i := 0; i < len(rows); i += chunkSize {
 		end := i + chunkSize
@@ -84,7 +86,7 @@ func (w *Worker) processJob(ctx context.Context, job *importjob.Job) {
 		wg.Add(1)
 		go func(c []importjob.ImportRow, o int) {
 			defer wg.Done()
-			w.processChunk(ctx, job, c, o, existingNames)
+			w.processChunk(ctx, job, c, o, existingNames, &mu)
 		}(chunk, offset)
 	}
 	wg.Wait()
@@ -99,12 +101,16 @@ func (w *Worker) processChunk(
 	chunk []importjob.ImportRow,
 	offset int,
 	existingNames map[string]bool,
+	mu *sync.RWMutex,
 ) {
 	for i, row := range chunk {
 		rowNum := offset + i + 1
 
 		// 業務ルール: 同名メニュー重複チェック（インメモリ）
-		if existingNames[row.MenuName] {
+		mu.RLock()
+		exists := existingNames[row.MenuName]
+		mu.RUnlock()
+		if exists {
 			job.RecordFailure(rowNum, row.MenuName, "同名メニューが既に存在します")
 			continue
 		}
@@ -129,7 +135,9 @@ func (w *Worker) processChunk(
 			continue
 		}
 
+		mu.Lock()
 		existingNames[row.MenuName] = true // 同じバッチ内の重複も防ぐ
+		mu.Unlock()
 		job.RecordSuccess()
 	}
 }

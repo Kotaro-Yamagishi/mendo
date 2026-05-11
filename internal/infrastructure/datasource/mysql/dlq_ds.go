@@ -1,6 +1,7 @@
 package mysql
 
 import (
+	"bytes"
 	"context"
 	"database/sql"
 	"fmt"
@@ -53,10 +54,11 @@ func (d *DLQDataSource) FindAllDeadLetterRows(ctx context.Context) ([]datasource
 	var result []datasource.DeadLetterRow
 	for rows.Next() {
 		var row datasource.DeadLetterRow
+		var payloadRaw []byte
 		if err := rows.Scan(
 			&row.ID,
 			&row.EventType,
-			&row.Payload,
+			&payloadRaw,
 			&row.Error,
 			&row.FailCount,
 			&row.HandlerName,
@@ -64,6 +66,11 @@ func (d *DLQDataSource) FindAllDeadLetterRows(ctx context.Context) ([]datasource
 		); err != nil {
 			return nil, fmt.Errorf("scan dead letter row: %w", err)
 		}
+		var buf bytes.Buffer
+		if err := compactJSON(&buf, payloadRaw); err != nil {
+			return nil, fmt.Errorf("compact payload json: %w", err)
+		}
+		row.Payload = buf.String()
 		result = append(result, row)
 	}
 	if err := rows.Err(); err != nil {
@@ -77,6 +84,7 @@ func (d *DLQDataSource) FindAllDeadLetterRows(ctx context.Context) ([]datasource
 // 見つからない場合は nil, nil を返す。
 func (d *DLQDataSource) FindDeadLetterRowByID(ctx context.Context, id string) (*datasource.DeadLetterRow, error) {
 	var row datasource.DeadLetterRow
+	var payloadRaw []byte
 	err := d.db.QueryRowContext(ctx,
 		`SELECT id, event_type, payload, error, fail_count, handler_name, last_fail_at
 		   FROM dlq
@@ -85,7 +93,7 @@ func (d *DLQDataSource) FindDeadLetterRowByID(ctx context.Context, id string) (*
 	).Scan(
 		&row.ID,
 		&row.EventType,
-		&row.Payload,
+		&payloadRaw,
 		&row.Error,
 		&row.FailCount,
 		&row.HandlerName,
@@ -97,6 +105,11 @@ func (d *DLQDataSource) FindDeadLetterRowByID(ctx context.Context, id string) (*
 	if err != nil {
 		return nil, fmt.Errorf("find dead letter row by id: %w", err)
 	}
+	var buf bytes.Buffer
+	if err := compactJSON(&buf, payloadRaw); err != nil {
+		return nil, fmt.Errorf("compact payload json: %w", err)
+	}
+	row.Payload = buf.String()
 	return &row, nil
 }
 

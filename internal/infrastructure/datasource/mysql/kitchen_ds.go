@@ -14,8 +14,8 @@ import (
 //
 // テーブル:
 //
-//	kc_kitchens      (id, max_capacity, created_at)
-//	kc_cooking_tasks (id, kitchen_id, order_id, instructions JSON, status, started_at, completed_at)
+//	kc_kitchens      (kitchen_id, max_capacity, created_at)
+//	kc_cooking_tasks (task_id, kitchen_id, order_id, instructions JSON, status, started_at, completed_at)
 type MySQLKitchenDataSource struct {
 	db *sql.DB
 }
@@ -30,7 +30,7 @@ func (ds *MySQLKitchenDataSource) FindKitchenByID(ctx context.Context, id string
 
 	var row datasource.KitchenRow
 	err := c.QueryRowContext(ctx,
-		`SELECT id, max_capacity, created_at FROM kc_kitchens WHERE id = ?`,
+		`SELECT kitchen_id, max_capacity, created_at FROM kc_kitchens WHERE kitchen_id = ?`,
 		id,
 	).Scan(&row.KitchenID, &row.MaxCapacity, &row.CreatedAt)
 	if err == sql.ErrNoRows {
@@ -47,7 +47,7 @@ func (ds *MySQLKitchenDataSource) FindCookingTasksByKitchenID(ctx context.Contex
 	c := infraMysql.GetConn(ctx, ds.db)
 
 	rows, err := c.QueryContext(ctx,
-		`SELECT id, kitchen_id, order_id, status, instructions, started_at, completed_at
+		`SELECT task_id, kitchen_id, order_id, status, instructions, started_at, completed_at
 		   FROM kc_cooking_tasks
 		  WHERE kitchen_id = ?
 		  ORDER BY started_at ASC`,
@@ -103,7 +103,7 @@ func (ds *MySQLKitchenDataSource) UpsertKitchen(ctx context.Context, row *dataso
 	c := infraMysql.GetConn(ctx, ds.db)
 
 	_, err := c.ExecContext(ctx,
-		`INSERT INTO kc_kitchens (id, max_capacity, created_at) VALUES (?, ?, ?)
+		`INSERT INTO kc_kitchens (kitchen_id, max_capacity, created_at) VALUES (?, ?, ?)
 		 ON DUPLICATE KEY UPDATE max_capacity = VALUES(max_capacity)`,
 		row.KitchenID,
 		row.MaxCapacity,
@@ -120,7 +120,7 @@ func (ds *MySQLKitchenDataSource) InsertCookingTask(ctx context.Context, row *da
 	c := infraMysql.GetConn(ctx, ds.db)
 
 	_, err := c.ExecContext(ctx,
-		`INSERT IGNORE INTO kc_cooking_tasks (id, kitchen_id, order_id, status, instructions, started_at, completed_at)
+		`INSERT IGNORE INTO kc_cooking_tasks (task_id, kitchen_id, order_id, status, instructions, started_at, completed_at)
 		 VALUES (?, ?, ?, ?, ?, ?, ?)`,
 		row.TaskID,
 		row.KitchenID,

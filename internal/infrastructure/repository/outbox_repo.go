@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/google/uuid"
 	"mendo/internal/domain"
 	"mendo/internal/infrastructure/datasource"
 )
@@ -30,6 +31,7 @@ func (r *OutboxRepository) Store(ctx context.Context, events []domain.Event) err
 			return fmt.Errorf("OutboxRepository.Store marshal: %w", err)
 		}
 		rows = append(rows, datasource.OutboxRow{
+			ID:          uuid.New().String(),
 			EventType:   event.GetEventType(),
 			AggregateID: event.GetAggregateID(),
 			Payload:     string(payload),

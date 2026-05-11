@@ -17,10 +17,11 @@ import (
 type ConfirmOrderESUsecase struct {
 	eventStore domain.EventStore
 	outbox     domain.Outbox
+	publisher  domain.EventPublisher
 }
 
-func NewConfirmOrderESUsecase(es domain.EventStore, ob domain.Outbox) *ConfirmOrderESUsecase {
-	return &ConfirmOrderESUsecase{eventStore: es, outbox: ob}
+func NewConfirmOrderESUsecase(es domain.EventStore, ob domain.Outbox, pub domain.EventPublisher) *ConfirmOrderESUsecase {
+	return &ConfirmOrderESUsecase{eventStore: es, outbox: ob, publisher: pub}
 }
 
 func (uc *ConfirmOrderESUsecase) Execute(ctx context.Context, orderID string) error {
@@ -43,12 +44,17 @@ func (uc *ConfirmOrderESUsecase) Execute(ctx context.Context, orderID string) er
 		return fmt.Errorf("failed to save events: %w", err)
 	}
 
-	// 5. Outbox にイベントを保存（Publish は RelayService が行う）
+	// 5. Outbox にイベントを保存
 	if err := uc.outbox.Store(ctx, o.UncommittedEvents()); err != nil {
 		return fmt.Errorf("failed to store events in outbox: %w", err)
 	}
 
-	// 6. イベントをクリア
+	// 6. EventBus に Publish（Projection 更新や後続ユースケースの起動）
+	if err := uc.publisher.Publish(ctx, o.UncommittedEvents()...); err != nil {
+		return fmt.Errorf("failed to publish events: %w", err)
+	}
+
+	// 7. イベントをクリア
 	o.ClearEvents()
 
 	return nil

@@ -69,6 +69,7 @@ func (k *Kitchen) CookingCapacity() int {
 
 func (k *Kitchen) ID() KitchenID               { return k.id }
 func (k *Kitchen) DomainEvents() []domain.Event { return k.domainEvents }
+func (k *Kitchen) Tasks() []CookingTask         { return k.tasks }
 
 // ReconstructKitchen は DB から読み込んだタスク一覧を使って Kitchen を復元する。
 // ドメインイベントは発行しない（永続化済みの状態を読み戻すだけ）。

@@ -11,7 +11,7 @@ import (
 
 // MySQLMenuDataSource は MenuDataSource の MySQL 実装。
 //
-// テーブル: oc_menus (id, name, price, available, created_at, updated_at)
+// テーブル: oc_menus (menu_id, name, price, available, created_at, updated_at)
 type MySQLMenuDataSource struct {
 	db *sql.DB
 }
@@ -27,7 +27,7 @@ func (ds *MySQLMenuDataSource) FindMenuByID(ctx context.Context, id string) (*da
 
 	var row datasource.MenuRow
 	err := c.QueryRowContext(ctx,
-		`SELECT id, name, price, available, created_at, updated_at FROM oc_menus WHERE id = ?`,
+		`SELECT menu_id, name, price, available, created_at, updated_at FROM oc_menus WHERE menu_id = ?`,
 		id,
 	).Scan(&row.MenuID, &row.Name, &row.Price, &row.Available, &row.CreatedAt, &row.UpdatedAt)
 	if err == sql.ErrNoRows {
@@ -44,7 +44,7 @@ func (ds *MySQLMenuDataSource) FindAllMenus(ctx context.Context) ([]datasource.M
 	c := infraMysql.GetConn(ctx, ds.db)
 
 	rows, err := c.QueryContext(ctx,
-		`SELECT id, name, price, available, created_at, updated_at FROM oc_menus ORDER BY name ASC`,
+		`SELECT menu_id, name, price, available, created_at, updated_at FROM oc_menus ORDER BY name ASC`,
 	)
 	if err != nil {
 		return nil, fmt.Errorf("find all menus: %w", err)
@@ -70,7 +70,7 @@ func (ds *MySQLMenuDataSource) InsertMenu(ctx context.Context, row *datasource.M
 	c := infraMysql.GetConn(ctx, ds.db)
 
 	_, err := c.ExecContext(ctx,
-		`INSERT INTO oc_menus (id, name, price, available, created_at, updated_at)
+		`INSERT INTO oc_menus (menu_id, name, price, available, created_at, updated_at)
 		 VALUES (?, ?, ?, ?, ?, ?)
 		 ON DUPLICATE KEY UPDATE name = VALUES(name), price = VALUES(price), available = VALUES(available), updated_at = VALUES(updated_at)`,
 		row.MenuID,
@@ -91,7 +91,7 @@ func (ds *MySQLMenuDataSource) UpdateMenuAvailability(ctx context.Context, id st
 	c := infraMysql.GetConn(ctx, ds.db)
 
 	_, err := c.ExecContext(ctx,
-		`UPDATE oc_menus SET available = ? WHERE id = ?`,
+		`UPDATE oc_menus SET available = ? WHERE menu_id = ?`,
 		available,
 		id,
 	)

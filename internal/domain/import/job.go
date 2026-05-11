@@ -99,10 +99,46 @@ func (j *Job) Complete() {
 func (j *Job) Progress() int {
 	j.mu.RLock()
 	defer j.mu.RUnlock()
+	return j.progress()
+}
+
+// progress はロックを取らずにプログレスを計算する内部メソッド。
+// 呼び出し元がすでにロックを保持している場合に使う。
+func (j *Job) progress() int {
 	if j.TotalRows == 0 {
 		return 100
 	}
 	return (j.ProcessedRows * 100) / j.TotalRows
+}
+
+// GetStatus は現在のステータスを安全に返す。
+func (j *Job) GetStatus() JobStatus {
+	j.mu.RLock()
+	defer j.mu.RUnlock()
+	return j.Status
+}
+
+// GetSucceededRows は成功行数を安全に返す。
+func (j *Job) GetSucceededRows() int {
+	j.mu.RLock()
+	defer j.mu.RUnlock()
+	return j.SucceededRows
+}
+
+// GetFailedRows は失敗行数を安全に返す。
+func (j *Job) GetFailedRows() int {
+	j.mu.RLock()
+	defer j.mu.RUnlock()
+	return j.FailedRows
+}
+
+// GetErrors は失敗リストを安全に返す。
+func (j *Job) GetErrors() []ImportError {
+	j.mu.RLock()
+	defer j.mu.RUnlock()
+	result := make([]ImportError, len(j.Errors))
+	copy(result, j.Errors)
+	return result
 }
 
 // Summary はジョブのサマリーを返す。
@@ -110,5 +146,5 @@ func (j *Job) Summary() string {
 	j.mu.RLock()
 	defer j.mu.RUnlock()
 	return fmt.Sprintf("total=%d succeeded=%d failed=%d progress=%d%%",
-		j.TotalRows, j.SucceededRows, j.FailedRows, j.Progress())
+		j.TotalRows, j.SucceededRows, j.FailedRows, j.progress())
 }

@@ -11,14 +11,14 @@ import (
 
 // CreateOrderInput は注文作成の入力。
 type CreateOrderInput struct {
-	SeatNo int
-	Items  []CreateOrderItemInput
+	SeatNo int                    `json:"seat_no"`
+	Items  []CreateOrderItemInput `json:"items"`
 }
 
 type CreateOrderItemInput struct {
-	MenuID   string
-	Toppings []string
-	Hardness string
+	MenuID   string   `json:"menu_id"`
+	Toppings []string `json:"toppings"`
+	Hardness string   `json:"hardness"`
 }
 
 // CreateOrderUsecase は注文作成のユースケース（ES版）。
@@ -26,10 +26,11 @@ type CreateOrderItemInput struct {
 type CreateOrderUsecase struct {
 	eventStore domain.EventStore
 	outbox     domain.Outbox
+	publisher  domain.EventPublisher
 }
 
-func NewCreateOrderUsecase(es domain.EventStore, ob domain.Outbox) *CreateOrderUsecase {
-	return &CreateOrderUsecase{eventStore: es, outbox: ob}
+func NewCreateOrderUsecase(es domain.EventStore, ob domain.Outbox, pub domain.EventPublisher) *CreateOrderUsecase {
+	return &CreateOrderUsecase{eventStore: es, outbox: ob, publisher: pub}
 }
 
 func (uc *CreateOrderUsecase) Execute(ctx context.Context, input CreateOrderInput) (string, error) {
@@ -51,12 +52,17 @@ func (uc *CreateOrderUsecase) Execute(ctx context.Context, input CreateOrderInpu
 		return "", fmt.Errorf("failed to save events: %w", err)
 	}
 
-	// 5. Outbox にイベントを保存（Publish は RelayService が行う）
+	// 5. Outbox にイベントを保存
 	if err := uc.outbox.Store(ctx, o.UncommittedEvents()); err != nil {
 		return "", fmt.Errorf("failed to store events in outbox: %w", err)
 	}
 
-	// 6. イベントをクリア
+	// 6. EventBus に Publish（Projection 更新や後続ユースケースの起動）
+	if err := uc.publisher.Publish(ctx, o.UncommittedEvents()...); err != nil {
+		return "", fmt.Errorf("failed to publish events: %w", err)
+	}
+
+	// 7. イベントをクリア
 	o.ClearEvents()
 
 	return orderID, nil
