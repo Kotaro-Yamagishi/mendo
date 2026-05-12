@@ -2,11 +2,11 @@ package kitchen_test
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"testing"
 
 	appkitchen "mendo/internal/application/command/kitchen"
+	"mendo/internal/apperrors"
 	"mendo/internal/domain/contract"
 	kitchendomain "mendo/internal/domain/kitchen"
 	"mendo/internal/domain/order"
@@ -86,7 +86,7 @@ func Test_StartCooking_フル稼働時はCookingRejectedをPublish(t *testing.T)
 func Test_StartCooking_Kitchen見つからない(t *testing.T) {
 	t.Parallel()
 
-	reader := &testutil.StubKitchenReader{FindErr: errors.New("not found")}
+	reader := &testutil.StubKitchenReader{FindErr: apperrors.Infrastructure("kitchen not found", nil)}
 	writer := &testutil.SpyKitchenWriter{}
 	pub := &testutil.SpyEventPublisher{}
 	uc := newStartCookingUsecase(reader, writer, pub)
@@ -100,6 +100,6 @@ func Test_StartCooking_Kitchen見つからない(t *testing.T) {
 	err := uc.HandleOrderConfirmedPublic(context.Background(), event)
 
 	require.Error(t, err)
-	assert.Contains(t, err.Error(), "find kitchen")
+	assert.True(t, apperrors.IsCode(err, "INTERNAL_ERROR"), "インフラエラーは INTERNAL_ERROR コード")
 	assert.Nil(t, writer.SavedKitchen)
 }

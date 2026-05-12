@@ -7,6 +7,7 @@ import (
 
 	"github.com/google/uuid"
 
+	"mendo/internal/apperrors"
 	"mendo/internal/domain"
 )
 
@@ -52,7 +53,7 @@ func (b *WatermillEventBus) Publish(ctx context.Context, events ...domain.Event)
 					HandlerName: handlerName,
 				}
 				if dlqErr := b.dlq.Store(ctx, letter); dlqErr != nil {
-					return fmt.Errorf("DLQ store failed: %w", dlqErr)
+					return apperrors.Infrastructure("DLQ への保存に失敗", dlqErr)
 				}
 				fmt.Printf("[EventBus] → DLQ: %s (handler: %s, error: %s)\n", eventType, handlerName, lastErr.Error())
 			}

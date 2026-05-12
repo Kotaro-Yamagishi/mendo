@@ -2,14 +2,13 @@ package kitchen_test
 
 import (
 	"context"
-	"errors"
 	"testing"
 
+	appkitchen "mendo/internal/application/command/kitchen"
+	"mendo/internal/apperrors"
 	kitchendomain "mendo/internal/domain/kitchen"
 	"mendo/internal/domain/order"
 	"mendo/internal/testutil"
-
-	appkitchen "mendo/internal/application/command/kitchen"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -41,17 +40,17 @@ func Test_CompleteCooking_異常系(t *testing.T) {
 	t.Parallel()
 
 	tests := []struct {
-		name    string
-		setup   func() (*testutil.StubKitchenReader, order.OrderID)
-		wantErr string
+		name     string
+		setup    func() (*testutil.StubKitchenReader, order.OrderID)
+		wantCode string
 	}{
 		{
 			name: "厨房見つからない",
 			setup: func() (*testutil.StubKitchenReader, order.OrderID) {
-				return &testutil.StubKitchenReader{FindErr: errors.New("not found")},
+				return &testutil.StubKitchenReader{FindErr: apperrors.Infrastructure("kitchen not found", nil)},
 					order.OrderID("order-1")
 			},
-			wantErr: "find kitchen",
+			wantCode: "INTERNAL_ERROR",
 		},
 		{
 			name: "タスク見つからない",
@@ -60,7 +59,7 @@ func Test_CompleteCooking_異常系(t *testing.T) {
 				return &testutil.StubKitchenReader{Kitchen: k},
 					order.OrderID("nonexistent")
 			},
-			wantErr: "complete cooking task",
+			wantCode: kitchendomain.ErrCodeTaskNotFound,
 		},
 	}
 	for _, tt := range tests {
@@ -75,7 +74,7 @@ func Test_CompleteCooking_異常系(t *testing.T) {
 			err := uc.Execute(context.Background(), orderID)
 
 			require.Error(t, err)
-			assert.Contains(t, err.Error(), tt.wantErr)
+			assert.True(t, apperrors.IsCode(err, tt.wantCode), "got: %v", err)
 		})
 	}
 }

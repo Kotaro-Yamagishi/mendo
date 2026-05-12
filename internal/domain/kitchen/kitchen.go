@@ -1,8 +1,8 @@
 package kitchen
 
 import (
-	"errors"
 	"mendo/internal/domain"
+	"mendo/internal/apperrors"
 	"mendo/internal/domain/order"
 )
 
@@ -28,7 +28,7 @@ func (k *Kitchen) AddCookingTask(orderID order.OrderID, instructions []CookingIn
 	}
 	if activeTasks >= MaxConcurrentTasks {
 		k.domainEvents = append(k.domainEvents, NewCookingRejected(k.id, string(orderID), "厨房がフル稼働中です", ""))
-		return errors.New("厨房がフル稼働中です。しばらくお待ちください")
+		return apperrors.Domain(ErrCodeKitchenFull, "厨房がフル稼働中です。しばらくお待ちください")
 	}
 
 	task := newCookingTask(orderID, instructions)
@@ -42,7 +42,7 @@ func (k *Kitchen) CompleteCookingTask(orderID order.OrderID) error {
 		if k.tasks[i].orderID == orderID {
 			// 業務ルール: すでに完了してないかチェック
 			if k.tasks[i].status == TaskCompleted {
-				return errors.New("すでに調理完了です")
+				return apperrors.Domain(ErrCodeAlreadyCooked, "すでに調理完了です")
 			}
 
 			// 状態変更
@@ -53,7 +53,7 @@ func (k *Kitchen) CompleteCookingTask(orderID order.OrderID) error {
 			return nil
 		}
 	}
-	return errors.New("調理タスクが見つかりません")
+	return apperrors.Domain(ErrCodeTaskNotFound, "調理タスクが見つかりません")
 }
 
 // CookingCapacity は現在の調理可能数を返す。

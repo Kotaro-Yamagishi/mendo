@@ -1,8 +1,9 @@
 package menu
 
 import (
-	"errors"
 	"fmt"
+
+	"mendo/internal/apperrors"
 )
 
 // --- MenuID ---
@@ -19,7 +20,7 @@ type MenuName struct {
 
 func NewMenuName(s string) (MenuName, error) {
 	if s == "" {
-		return MenuName{}, errors.New("メニュー名は空にできません")
+		return MenuName{}, apperrors.Domain(ErrCodeInvalidMenuName, "メニュー名は空にできません")
 	}
 	return MenuName{value: s}, nil
 }
@@ -32,7 +33,7 @@ type Price int
 
 func NewPrice(yen int) (Price, error) {
 	if yen < 0 {
-		return 0, fmt.Errorf("価格は0以上: %d", yen)
+		return 0, apperrors.Domain(ErrCodeInvalidPrice, fmt.Sprintf("価格は0以上: %d", yen))
 	}
 	return Price(yen), nil
 }

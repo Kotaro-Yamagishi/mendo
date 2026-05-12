@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"time"
 
+	"mendo/internal/apperrors"
 	"mendo/internal/domain"
 )
 
@@ -42,14 +43,14 @@ func (r *RelayService) Start(ctx context.Context) {
 func (r *RelayService) relay(ctx context.Context) error {
 	events, err := r.outbox.Fetch(ctx, 100)
 	if err != nil {
-		return fmt.Errorf("failed to fetch outbox events: %w", err)
+		return apperrors.Infrastructure("Outbox イベントの取得に失敗", err)
 	}
 	if len(events) == 0 {
 		return nil
 	}
 
 	if err := r.publisher.Publish(ctx, events...); err != nil {
-		return fmt.Errorf("failed to publish outbox events: %w", err)
+		return apperrors.Infrastructure("Outbox イベントの配信に失敗", err)
 	}
 
 	eventIDs := make([]string, 0, len(events))
@@ -57,7 +58,7 @@ func (r *RelayService) relay(ctx context.Context) error {
 		eventIDs = append(eventIDs, event.GetAggregateID())
 	}
 	if err := r.outbox.MarkDelivered(ctx, eventIDs); err != nil {
-		return fmt.Errorf("failed to mark delivered: %w", err)
+		return apperrors.Infrastructure("Outbox 配信済みマークに失敗", err)
 	}
 
 	fmt.Printf("[OutboxRelay] delivered %d events\n", len(events))

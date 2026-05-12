@@ -74,5 +74,5 @@ func Test_OrderReaderRepo_CountPending_DataSourceエラー(t *testing.T) {
 	_, err := repo.CountPending(context.Background())
 
 	require.Error(t, err)
-	assert.Contains(t, err.Error(), "CountPending")
+	assert.Contains(t, err.Error(), "注文一覧の取得に失敗")
 }

@@ -24,22 +24,19 @@ func Test_MenuHandler_HandleSoldOut(t *testing.T) {
 	m := menudomain.NewMenu(menudomain.MenuID("menu-1"), name, price)
 
 	tests := []struct {
-		name         string
-		reader       *testutil.StubMenuReader
-		wantStatus   int
-		wantContains string
+		name       string
+		reader     *testutil.StubMenuReader
+		wantStatus int
 	}{
 		{
-			name:         "正常系",
-			reader:       &testutil.StubMenuReader{Menu: m},
-			wantStatus:   http.StatusOK,
-			wantContains: "sold_out",
+			name:       "正常系",
+			reader:     &testutil.StubMenuReader{Menu: m},
+			wantStatus: http.StatusOK,
 		},
 		{
-			name:         "メニュー見つからない",
-			reader:       &testutil.StubMenuReader{FindErr: errors.New("not found")},
-			wantStatus:   http.StatusUnprocessableEntity,
-			wantContains: "find menu",
+			name:       "メニュー見つからない_インフラエラーは500",
+			reader:     &testutil.StubMenuReader{FindErr: errors.New("not found")},
+			wantStatus: http.StatusInternalServerError,
 		},
 	}
 
@@ -55,17 +52,15 @@ func Test_MenuHandler_HandleSoldOut(t *testing.T) {
 			req.SetPathValue("id", "menu-1")
 			rec := httptest.NewRecorder()
 
-			h.HandleSoldOut(rec, req)
+			wrap(h.HandleSoldOut)(rec, req)
 
 			assert.Equal(t, tt.wantStatus, rec.Code)
 
-			var body map[string]interface{}
-			require.NoError(t, json.NewDecoder(rec.Body).Decode(&body))
 			if tt.wantStatus == http.StatusOK {
+				var body map[string]interface{}
+				require.NoError(t, json.NewDecoder(rec.Body).Decode(&body))
 				data := body["data"].(map[string]interface{})
-				assert.Equal(t, tt.wantContains, data["status"])
-			} else {
-				assert.Contains(t, body["error"], tt.wantContains)
+				assert.Equal(t, "sold_out", data["status"])
 			}
 		})
 	}

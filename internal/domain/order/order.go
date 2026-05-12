@@ -1,8 +1,8 @@
 package order
 
 import (
-	"errors"
 	"mendo/internal/domain"
+	"mendo/internal/apperrors"
 	"mendo/internal/domain/menu"
 )
 
@@ -79,7 +79,7 @@ func Create(orderID string, seatNo int) *Order {
 func (o *Order) AddItem(menuID menu.MenuID, toppings []string, hardness string) error {
 	// 業務ルール: トッピングは3つまで
 	if len(toppings) > 3 {
-		return errors.New("トッピングは3つまでです")
+		return apperrors.Domain(ErrCodeTooManyToppings, "トッピングは3つまでです")
 	}
 
 	event := NewItemAdded(o.id, menuID, toppings, hardness, "")
@@ -92,10 +92,10 @@ func (o *Order) AddItem(menuID menu.MenuID, toppings []string, hardness string) 
 func (o *Order) Confirm() error {
 	// 業務ルール
 	if o.status != "pending" {
-		return errors.New("確定待ち以外は確定できません")
+		return apperrors.Domain(ErrCodeNotPending, "確定待ち以外は確定できません")
 	}
 	if len(o.items) == 0 {
-		return errors.New("注文が空です")
+		return apperrors.Domain(ErrCodeEmptyItems, "注文が空です")
 	}
 
 	confirmedItems := make([]ConfirmedItem, len(o.items))
@@ -115,7 +115,7 @@ func (o *Order) Confirm() error {
 // Cancel は注文をキャンセルする。
 func (o *Order) Cancel(reason string) error {
 	if o.status != StatusConfirmed {
-		return errors.New("確定済みのみキャンセルできます")
+		return apperrors.Domain(ErrCodeNotConfirmed, "確定済みのみキャンセルできます")
 	}
 
 	event := NewOrderCancelled(o.id, reason, "")

@@ -3,10 +3,10 @@ package repository
 import (
 	"context"
 	"encoding/json"
-	"fmt"
 	"time"
 
 	"github.com/google/uuid"
+	"mendo/internal/apperrors"
 	"mendo/internal/domain"
 	"mendo/internal/infrastructure/datasource"
 )
@@ -28,7 +28,7 @@ func (r *OutboxRepository) Store(ctx context.Context, events []domain.Event) err
 	for _, event := range events {
 		payload, err := json.Marshal(event)
 		if err != nil {
-			return fmt.Errorf("OutboxRepository.Store marshal: %w", err)
+			return apperrors.Infrastructure("イベントの変換に失敗", err)
 		}
 		rows = append(rows, datasource.OutboxRow{
 			ID:          uuid.New().String(),
@@ -40,7 +40,7 @@ func (r *OutboxRepository) Store(ctx context.Context, events []domain.Event) err
 		})
 	}
 	if err := r.ds.InsertOutboxRows(ctx, rows); err != nil {
-		return fmt.Errorf("OutboxRepository.Store InsertOutboxRows: %w", err)
+		return apperrors.Infrastructure("アウトボックスへの保存に失敗", err)
 	}
 	return nil
 }
@@ -49,14 +49,14 @@ func (r *OutboxRepository) Store(ctx context.Context, events []domain.Event) err
 func (r *OutboxRepository) Fetch(ctx context.Context, limit int) ([]domain.Event, error) {
 	rows, err := r.ds.FindUndeliveredOutboxRows(ctx, limit)
 	if err != nil {
-		return nil, fmt.Errorf("OutboxRepository.Fetch: %w", err)
+		return nil, apperrors.Infrastructure("アウトボックスの取得に失敗", err)
 	}
 
 	events := make([]domain.Event, 0, len(rows))
 	for _, row := range rows {
 		event, err := unmarshalOutboxEvent(row)
 		if err != nil {
-			return nil, fmt.Errorf("OutboxRepository.Fetch unmarshal %s: %w", row.EventType, err)
+			return nil, apperrors.Infrastructure("アウトボックスイベントの変換に失敗", err)
 		}
 		events = append(events, event)
 	}
@@ -66,7 +66,7 @@ func (r *OutboxRepository) Fetch(ctx context.Context, limit int) ([]domain.Event
 // MarkDelivered は配信済みのイベントをマークする。
 func (r *OutboxRepository) MarkDelivered(ctx context.Context, eventIDs []string) error {
 	if err := r.ds.MarkOutboxRowsDelivered(ctx, eventIDs); err != nil {
-		return fmt.Errorf("OutboxRepository.MarkDelivered: %w", err)
+		return apperrors.Infrastructure("アウトボックスの配信済みマークに失敗", err)
 	}
 	return nil
 }

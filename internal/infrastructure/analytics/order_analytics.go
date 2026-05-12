@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"time"
 
+	"mendo/internal/apperrors"
 	"mendo/internal/domain"
 	"mendo/internal/domain/order"
 )
@@ -63,7 +64,7 @@ func (p *OrderAnalyticsProjection) HandleOrderEvent(_ context.Context, event dom
 func (p *OrderAnalyticsProjection) applyOrderConfirmed(event domain.Event) error {
 	confirmed, ok := event.(*order.OrderConfirmed)
 	if !ok {
-		return fmt.Errorf("unexpected event type: %T", event)
+		return apperrors.Infrastructure("予期しないイベント型", fmt.Errorf("expected *order.OrderConfirmed, got %T", event))
 	}
 
 	now := time.Now()

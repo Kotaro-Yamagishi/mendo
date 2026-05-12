@@ -17,13 +17,14 @@ func NewMenuHandler(soldOutUC *menucommand.SoldOutMenuUsecase) *MenuHandler {
 }
 
 // HandleSoldOut は POST /menus/{id}/soldout のハンドラ。メニューを品切れにする。
-func (h *MenuHandler) HandleSoldOut(w http.ResponseWriter, r *http.Request) {
+func (h *MenuHandler) HandleSoldOut(w http.ResponseWriter, r *http.Request) error {
 	menuID := menu.MenuID(r.PathValue("id"))
 
 	if err := h.soldOutUC.Execute(r.Context(), menuID); err != nil {
-		writeError(w, http.StatusUnprocessableEntity, err.Error())
-		return
+		return err
 	}
 
-	writeSuccess(w, http.StatusOK, map[string]string{"status": "sold_out"})
+	WriteSuccess(w, http.StatusOK, map[string]string{"status": "sold_out"})
+	return nil
 }
+

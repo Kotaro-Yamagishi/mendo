@@ -71,7 +71,7 @@ func Test_ImportMenusUsecase_JobWriter失敗(t *testing.T) {
 	})
 
 	require.Error(t, err)
-	assert.Contains(t, err.Error(), "save import job")
+	assert.Contains(t, err.Error(), "db error")
 	// Save に失敗したらエンキューされない
 	assert.Empty(t, je.EnqueuedJobs)
 }

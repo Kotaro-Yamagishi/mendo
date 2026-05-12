@@ -76,6 +76,21 @@ writeError(w, http.StatusBadRequest, "invalid request")
 // → {"error": "invalid request"}
 ```
 
+## エラーハンドリング
+
+### 必須ルール
+- [ ] domain 層のエラーは `apperrors.Domain(code, message)` を使う
+- [ ] errors.New / fmt.Errorf を domain 層で使わない
+- [ ] application 層で domain エラーをラップしない（そのまま返す）
+- [ ] infrastructure エラーは `apperrors.Infrastructure(message, cause)` でラップ
+- [ ] handler は `AppHandlerFunc`（error を返す）で定義
+- [ ] 全エンドポイントを `ErrorMiddleware` でラップ
+- [ ] http.Error() を使わない
+- [ ] handler でステータスコードを直接指定しない
+- [ ] エラーコード定数は各集約の `errors.go` に定義
+- [ ] エラーは1回だけ handle する（ログ OR 復旧 OR 表示）
+- [ ] サーバーエラー（500系）はメッセージを隠蔽
+
 ## テスト方針
 
 | パターン | テスト方針 |

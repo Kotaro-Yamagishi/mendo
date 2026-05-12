@@ -2,7 +2,6 @@ package menu
 
 import (
 	"context"
-	"fmt"
 
 	"mendo/internal/domain/menu"
 )
@@ -21,13 +20,13 @@ func NewSoldOutMenuUsecase(mr menu.Reader, mw menu.Writer) *SoldOutMenuUsecase {
 func (uc *SoldOutMenuUsecase) Execute(ctx context.Context, menuID menu.MenuID) error {
 	m, err := uc.menuReader.FindByID(ctx, menuID)
 	if err != nil {
-		return fmt.Errorf("failed to find menu: %w", err)
+		return err
 	}
 
 	m.SoldOut()
 
 	if err := uc.menuWriter.Save(ctx, m); err != nil {
-		return fmt.Errorf("failed to save menu: %w", err)
+		return err
 	}
 	return nil
 }

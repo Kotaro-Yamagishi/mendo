@@ -1,9 +1,8 @@
 package specialorder
 
 import (
-	"errors"
-
 	commondomain "mendo/internal/domain"
+	"mendo/internal/apperrors"
 )
 
 // SpecialOrder はプロセスマネージャー。
@@ -31,7 +30,7 @@ func NewSpecialOrder(id SpecialOrderID, orderID, menuName string) *SpecialOrder 
 // Approve は店長が承認する。承認後、自動的に調理開始を判断する（プロセスマネージャーの役割）。
 func (so *SpecialOrder) Approve() error {
 	if so.status != StatusPending {
-		return errors.New("承認待ち状態のみ承認できます")
+		return apperrors.Domain(ErrCodeNotPending, "承認待ち状態のみ承認できます")
 	}
 	so.status = StatusApproved
 	so.domainEvents = append(so.domainEvents, NewSpecialOrderApproved(so.id, ""))
@@ -45,7 +44,7 @@ func (so *SpecialOrder) Approve() error {
 // Reject は店長が却下する。
 func (so *SpecialOrder) Reject(reason, suggestedMenu string) error {
 	if so.status != StatusPending {
-		return errors.New("承認待ち状態のみ却下できます")
+		return apperrors.Domain(ErrCodeNotPending, "承認待ち状態のみ却下できます")
 	}
 	so.status = StatusRejected
 	so.suggestedMenu = suggestedMenu
@@ -56,7 +55,7 @@ func (so *SpecialOrder) Reject(reason, suggestedMenu string) error {
 // ResubmitWithMenu は却下後に別メニューで再申請する。再度承認待ちに戻る。
 func (so *SpecialOrder) ResubmitWithMenu(newMenuName string) error {
 	if so.status != StatusRejected {
-		return errors.New("却下済みのみ再申請できます")
+		return apperrors.Domain(ErrCodeInvalidStatus, "却下済みのみ再申請できます")
 	}
 	so.menuName = newMenuName
 	so.status = StatusPending

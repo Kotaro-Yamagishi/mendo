@@ -4,10 +4,10 @@ import (
 	"context"
 	"testing"
 
+	apporder "mendo/internal/application/command/order"
+	"mendo/internal/apperrors"
 	"mendo/internal/domain/order"
 	"mendo/internal/testutil"
-
-	apporder "mendo/internal/application/command/order"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -60,5 +60,5 @@ func Test_CreateOrder_トッピング上限超過(t *testing.T) {
 	_, err := uc.Execute(context.Background(), input)
 
 	require.Error(t, err)
-	assert.Contains(t, err.Error(), "add item")
+	assert.True(t, apperrors.IsCode(err, order.ErrCodeTooManyToppings), "got: %v", err)
 }

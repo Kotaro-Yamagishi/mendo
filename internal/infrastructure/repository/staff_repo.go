@@ -2,8 +2,8 @@ package repository
 
 import (
 	"context"
-	"fmt"
 
+	"mendo/internal/apperrors"
 	"mendo/internal/infrastructure/datasource"
 	"mendo/internal/staff"
 )
@@ -21,7 +21,7 @@ func NewStaffRepository(ds datasource.StaffDataSource) *StaffRepository {
 // Save は Staff を StaffRow に変換して永続化する。
 func (r *StaffRepository) Save(ctx context.Context, s *staff.Staff) error {
 	if err := s.Validate(); err != nil {
-		return fmt.Errorf("StaffRepository.Save validation: %w", err)
+		return err
 	}
 	row := &datasource.StaffRow{
 		ID:        s.ID,
@@ -30,7 +30,7 @@ func (r *StaffRepository) Save(ctx context.Context, s *staff.Staff) error {
 		ShiftType: s.ShiftType,
 	}
 	if err := r.ds.UpsertStaff(ctx, row); err != nil {
-		return fmt.Errorf("StaffRepository.Save UpsertStaff: %w", err)
+		return apperrors.Infrastructure("スタッフの保存に失敗", err)
 	}
 	return nil
 }
@@ -39,10 +39,10 @@ func (r *StaffRepository) Save(ctx context.Context, s *staff.Staff) error {
 func (r *StaffRepository) FindByID(ctx context.Context, id string) (*staff.Staff, error) {
 	row, err := r.ds.FindStaffByID(ctx, id)
 	if err != nil {
-		return nil, fmt.Errorf("StaffRepository.FindByID: %w", err)
+		return nil, apperrors.Infrastructure("スタッフの取得に失敗", err)
 	}
 	if row == nil {
-		return nil, fmt.Errorf("staff not found: %s", id)
+		return nil, apperrors.NotFound("staff", id)
 	}
 	return rowToStaff(row), nil
 }
@@ -51,7 +51,7 @@ func (r *StaffRepository) FindByID(ctx context.Context, id string) (*staff.Staff
 func (r *StaffRepository) FindAll(ctx context.Context) ([]*staff.Staff, error) {
 	rows, err := r.ds.FindAllStaffs(ctx)
 	if err != nil {
-		return nil, fmt.Errorf("StaffRepository.FindAll: %w", err)
+		return nil, apperrors.Infrastructure("スタッフ一覧の取得に失敗", err)
 	}
 	staffs := make([]*staff.Staff, 0, len(rows))
 	for i := range rows {
@@ -63,7 +63,7 @@ func (r *StaffRepository) FindAll(ctx context.Context) ([]*staff.Staff, error) {
 // Delete は指定した ID の Staff を削除する。
 func (r *StaffRepository) Delete(ctx context.Context, id string) error {
 	if err := r.ds.DeleteStaff(ctx, id); err != nil {
-		return fmt.Errorf("StaffRepository.Delete: %w", err)
+		return apperrors.Infrastructure("スタッフの削除に失敗", err)
 	}
 	return nil
 }

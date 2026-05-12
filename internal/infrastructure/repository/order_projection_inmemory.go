@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"sync"
 
+	"mendo/internal/apperrors"
 	"mendo/internal/domain"
 	"mendo/internal/domain/order"
 )
@@ -77,7 +78,7 @@ func (s *InMemoryOrderStateStore) FindByID(_ context.Context, orderID string) (*
 
 	row, ok := s.store[orderID]
 	if !ok {
-		return nil, fmt.Errorf("order not found: %s", orderID)
+		return nil, apperrors.NotFound("order", orderID)
 	}
 	return row, nil
 }

@@ -2,8 +2,8 @@ package specialorder
 
 import (
 	"context"
-	"fmt"
 
+	"mendo/internal/apperrors"
 	"mendo/internal/domain"
 	"mendo/internal/domain/specialorder"
 )
@@ -21,16 +21,16 @@ func NewRejectSpecialOrderUsecase(r specialorder.Reader, w specialorder.Writer, 
 func (uc *RejectSpecialOrderUsecase) Execute(ctx context.Context, id, reason, suggestedMenu string) error {
 	so, err := uc.reader.FindByID(ctx, specialorder.SpecialOrderID(id))
 	if err != nil {
-		return fmt.Errorf("failed to find special order: %w", err)
+		return apperrors.NotFound("special_order", id)
 	}
 	if err := so.Reject(reason, suggestedMenu); err != nil {
-		return fmt.Errorf("failed to reject: %w", err)
+		return err
 	}
 	if err := uc.writer.Save(ctx, so); err != nil {
-		return fmt.Errorf("failed to save special order: %w", err)
+		return err
 	}
 	if err := uc.publisher.Publish(ctx, so.DomainEvents()...); err != nil {
-		return fmt.Errorf("failed to publish events: %w", err)
+		return err
 	}
 	return nil
 }

@@ -69,7 +69,7 @@ func Test_SpecialOrderHandler_HandleCreate(t *testing.T) {
 			req := httptest.NewRequest(http.MethodPost, "/special-orders", strings.NewReader(tt.body))
 			rec := httptest.NewRecorder()
 
-			h.HandleCreate(rec, req)
+			wrap(h.HandleCreate)(rec, req)
 
 			assert.Equal(t, tt.wantStatus, rec.Code)
 
@@ -105,7 +105,7 @@ func Test_SpecialOrderHandler_HandleApprove_正常系(t *testing.T) {
 	req.SetPathValue("id", "so-1")
 	rec := httptest.NewRecorder()
 
-	h.HandleApprove(rec, req)
+	wrap(h.HandleApprove)(rec, req)
 
 	assert.Equal(t, http.StatusOK, rec.Code)
 
@@ -157,7 +157,7 @@ func Test_SpecialOrderHandler_HandleReject(t *testing.T) {
 			req.SetPathValue("id", "so-1")
 			rec := httptest.NewRecorder()
 
-			h.HandleReject(rec, req)
+			wrap(h.HandleReject)(rec, req)
 
 			assert.Equal(t, tt.wantStatus, rec.Code)
 
@@ -222,7 +222,7 @@ func Test_SpecialOrderHandler_HandleResubmit(t *testing.T) {
 			req.SetPathValue("id", "so-1")
 			rec := httptest.NewRecorder()
 
-			h.HandleResubmit(rec, req)
+			wrap(h.HandleResubmit)(rec, req)
 
 			assert.Equal(t, tt.wantStatus, rec.Code)
 

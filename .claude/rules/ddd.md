@@ -206,9 +206,71 @@ interface/handler → application → domain ← infrastructure
 
 ## Handler レスポンス
 
-- 成功: `writeSuccess(w, status, data)` で JSON
-- エラー: `writeError(w, status, msg)` で JSON
-- `http.Error()` は使用禁止
+- 成功: `WriteSuccess(w, status, data)` で JSON
+- エラー: `return err` するだけ。ErrorMiddleware が JSON レスポンスを生成
+- `http.Error()` 禁止
+- `writeError()` 禁止（ErrorMiddleware に統一）
+
+## エラーハンドリング
+
+### AppError の配置
+- `internal/apperrors/` に配置（domain の外。横断的関心事）
+- domain/ には置かない。HTTP ステータスやインフラ概念を含むため
+- エラーコード定数は各集約の `errors.go` に定義（業務知識なので domain 内）
+
+### エラーを生成する場所（発生源で1回だけ分類）
+- **domain 層**: `apperrors.Domain(code, msg)` で業務ルール違反を返す
+- **repository 層**: datasource のエラーを `apperrors.NotFound` / `apperrors.Infrastructure` に変換する
+- **datasource 層**: `fmt.Errorf` で raw error を返す。apperrors を使わない。エラーの「意味づけ」は repository の責務
+- **subscribers**: 型アサーション失敗等、新規エラーを生成する場合のみ `apperrors.Infrastructure` を使う
+- **handler**: `readJSON` 失敗時のみ `apperrors.Validation` を返す。それ以外は `return err`
+- **mysql/tx.go, mysql/conn.go**: `fmt.Errorf` で raw error を返す。最低層なので apperrors を使わない
+
+### 二重ラップ禁止（最重要ルール）
+- **呼び出し先が既に AppError を返す場合、呼び出し元で再度 apperrors でラップしない**
+- application 層は `return err` するだけ。repository / domain のエラーをラップしない
+- handler は `return err` するだけ。usecase のエラーをラップしない
+- subscribers は usecase / projection のエラーを `return err` するだけ
+
+```go
+// ✅ 正しい（そのまま返す）
+k, err := uc.kitchenReader.FindByID(ctx, id)
+if err != nil {
+    return err  // repository が既に AppError を返してる
+}
+
+// ❌ 間違い（二重ラップ）
+k, err := uc.kitchenReader.FindByID(ctx, id)
+if err != nil {
+    return apperrors.Infrastructure("厨房の取得に失敗", err)  // 二重ラップ
+}
+```
+
+### 新規エラーを生成していい場所
+- **domain 層**: 業務ルール違反 → `apperrors.Domain(code, msg)`
+- **repository 層**: datasource の raw error → `apperrors.Infrastructure(msg, err)` / `apperrors.NotFound(resource, id)`
+- **handler**: readJSON 失敗 → `apperrors.Validation(...)`
+- **application 層**: usecase 自身が判断する場合のみ → `apperrors.NotFound(resource, id)`（例: events が空）
+- **subscribers**: 型アサーション失敗 → `apperrors.Infrastructure("予期しないイベント型", ...)`
+
+### handler
+- handler は `AppHandlerFunc`（`func(w, r) error`）で定義
+- 全エンドポイントを `ErrorMiddleware` でラップ
+- handler はステータスコードを意識しない。`return err` するだけ
+- `http.Error()` 禁止
+- `writeError()` 禁止（旧 API。ErrorMiddleware に統一）
+
+### ErrorMiddleware
+- panic recovery + エラー変換 + ログ出力を一括処理
+- `Category.IsClientError()` でクライアントエラーとサーバーエラーを自動判定
+- サーバーエラー（500系）はメッセージを隠蔽。ログにのみ詳細出力
+- TraceID を付与してレスポンスに含める
+
+### エラーは1回だけ handle
+- ログ OR 復旧 OR 表示のどれか1つ
+- 「ラップして返す」はハンドリングではない
+- ErrorMiddleware が最終ハンドラとして1回だけ処理する
+- application 層や repository 層でログを出さない
 
 ## ビルド・品質チェック
 

@@ -2,8 +2,8 @@ package order
 
 import (
 	"context"
-	"fmt"
 
+	"mendo/internal/apperrors"
 	"mendo/internal/domain"
 	"mendo/internal/domain/order"
 )
@@ -28,7 +28,10 @@ func (uc *ConfirmOrderESUsecase) Execute(ctx context.Context, orderID string) er
 	// 1. イベントストアからイベント列をロード
 	events, err := uc.eventStore.Load(ctx, orderID)
 	if err != nil {
-		return fmt.Errorf("failed to load events: %w", err)
+		return err
+	}
+	if len(events) == 0 {
+		return apperrors.NotFound("order", orderID)
 	}
 
 	// 2. イベント列から集約の現在の状態を復元
@@ -36,22 +39,22 @@ func (uc *ConfirmOrderESUsecase) Execute(ctx context.Context, orderID string) er
 
 	// 3. コマンド実行（業務ルールチェック + 新しいイベントが追加される）
 	if err := o.Confirm(); err != nil {
-		return fmt.Errorf("failed to confirm order: %w", err)
+		return err // domain の AppError をそのまま返す
 	}
 
 	// 4. 未コミットイベントをイベントストアに保存（INSERT only）
 	if err := uc.eventStore.Save(ctx, o.UncommittedEvents()); err != nil {
-		return fmt.Errorf("failed to save events: %w", err)
+		return err
 	}
 
 	// 5. Outbox にイベントを保存
 	if err := uc.outbox.Store(ctx, o.UncommittedEvents()); err != nil {
-		return fmt.Errorf("failed to store events in outbox: %w", err)
+		return err
 	}
 
 	// 6. EventBus に Publish（Projection 更新や後続ユースケースの起動）
 	if err := uc.publisher.Publish(ctx, o.UncommittedEvents()...); err != nil {
-		return fmt.Errorf("failed to publish events: %w", err)
+		return err
 	}
 
 	// 7. イベントをクリア

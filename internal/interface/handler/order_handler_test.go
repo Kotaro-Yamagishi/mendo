@@ -57,7 +57,7 @@ func Test_OrderHandler_HandleCreate(t *testing.T) {
 			req := httptest.NewRequest(http.MethodPost, "/orders", strings.NewReader(tt.body))
 			rec := httptest.NewRecorder()
 
-			h.HandleCreate(rec, req)
+			wrap(h.HandleCreate)(rec, req)
 
 			assert.Equal(t, tt.wantStatus, rec.Code)
 			if tt.wantStatus == http.StatusCreated {
@@ -109,7 +109,7 @@ func Test_OrderHandler_HandleConfirm(t *testing.T) {
 			req.SetPathValue("id", "order-1")
 			rec := httptest.NewRecorder()
 
-			h.HandleConfirm(rec, req)
+			wrap(h.HandleConfirm)(rec, req)
 
 			assert.Equal(t, tt.wantStatus, rec.Code)
 			if tt.wantStatus == http.StatusOK {
@@ -140,7 +140,7 @@ func Test_OrderHandler_HandleCancel_正常系(t *testing.T) {
 	req.SetPathValue("id", "order-1")
 	rec := httptest.NewRecorder()
 
-	h.HandleCancel(rec, req)
+	wrap(h.HandleCancel)(rec, req)
 
 	assert.Equal(t, http.StatusOK, rec.Code)
 }

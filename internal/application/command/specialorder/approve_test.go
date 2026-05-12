@@ -5,6 +5,7 @@ import (
 	"errors"
 	"testing"
 
+	"mendo/internal/apperrors"
 	sodomain "mendo/internal/domain/specialorder"
 	"mendo/internal/testutil"
 
@@ -35,9 +36,9 @@ func Test_ApproveSpecialOrder_異常系(t *testing.T) {
 	t.Parallel()
 
 	tests := []struct {
-		name    string
-		setup   func(t *testing.T) *testutil.StubSpecialOrderReader
-		wantErr string
+		name     string
+		setup    func(t *testing.T) *testutil.StubSpecialOrderReader
+		wantCode string
 	}{
 		{
 			name: "見つからない",
@@ -45,7 +46,7 @@ func Test_ApproveSpecialOrder_異常系(t *testing.T) {
 				t.Helper()
 				return &testutil.StubSpecialOrderReader{FindErr: errors.New("not found")}
 			},
-			wantErr: "find special order",
+			wantCode: "NOT_FOUND",
 		},
 		{
 			name: "業務ルール違反",
@@ -56,7 +57,7 @@ func Test_ApproveSpecialOrder_異常系(t *testing.T) {
 				require.NoError(t, so.Reject("材料切れ", "醤油ラーメン"))
 				return &testutil.StubSpecialOrderReader{SpecialOrder: so}
 			},
-			wantErr: "approve",
+			wantCode: sodomain.ErrCodeNotPending,
 		},
 	}
 	for _, tt := range tests {
@@ -70,7 +71,7 @@ func Test_ApproveSpecialOrder_異常系(t *testing.T) {
 			err := uc.Execute(context.Background(), "so-1")
 
 			require.Error(t, err)
-			assert.Contains(t, err.Error(), tt.wantErr)
+			assert.True(t, apperrors.IsCode(err, tt.wantCode), "expected code %s, got: %s", tt.wantCode, err.Error())
 		})
 	}
 }

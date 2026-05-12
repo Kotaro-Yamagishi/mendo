@@ -3,8 +3,8 @@ package repository
 import (
 	"context"
 	"encoding/json"
-	"fmt"
 
+	"mendo/internal/apperrors"
 	"mendo/internal/domain"
 	"mendo/internal/domain/order"
 	"mendo/internal/infrastructure/datasource"
@@ -36,13 +36,13 @@ func (r *OrderProjectionRepository) HandleEvent(ctx context.Context, event domai
 			UpdatedAt: e.OccurredAt,
 		}
 		if err := r.ds.UpsertOrderProjection(ctx, row); err != nil {
-			return fmt.Errorf("OrderProjectionRepository.HandleEvent OrderCreated: %w", err)
+			return apperrors.Infrastructure("注文プロジェクションの保存に失敗", err)
 		}
 
 	case order.ItemAdded:
 		existing, err := r.ds.FindOrderProjectionByID(ctx, e.GetAggregateID())
 		if err != nil {
-			return fmt.Errorf("OrderProjectionRepository.HandleEvent ItemAdded find: %w", err)
+			return apperrors.Infrastructure("注文プロジェクションの取得に失敗", err)
 		}
 		if existing == nil {
 			return nil
@@ -58,13 +58,13 @@ func (r *OrderProjectionRepository) HandleEvent(ctx context.Context, event domai
 		existing.Items = string(itemsJSON)
 		existing.UpdatedAt = e.OccurredAt
 		if err := r.ds.UpsertOrderProjection(ctx, existing); err != nil {
-			return fmt.Errorf("OrderProjectionRepository.HandleEvent ItemAdded upsert: %w", err)
+			return apperrors.Infrastructure("注文プロジェクションの保存に失敗", err)
 		}
 
 	case order.OrderConfirmed:
 		existing, err := r.ds.FindOrderProjectionByID(ctx, e.GetAggregateID())
 		if err != nil {
-			return fmt.Errorf("OrderProjectionRepository.HandleEvent OrderConfirmed find: %w", err)
+			return apperrors.Infrastructure("注文プロジェクションの取得に失敗", err)
 		}
 		if existing == nil {
 			return nil
@@ -72,13 +72,13 @@ func (r *OrderProjectionRepository) HandleEvent(ctx context.Context, event domai
 		existing.Status = "confirmed"
 		existing.UpdatedAt = e.OccurredAt
 		if err := r.ds.UpsertOrderProjection(ctx, existing); err != nil {
-			return fmt.Errorf("OrderProjectionRepository.HandleEvent OrderConfirmed upsert: %w", err)
+			return apperrors.Infrastructure("注文プロジェクションの保存に失敗", err)
 		}
 
 	case order.OrderCancelled:
 		existing, err := r.ds.FindOrderProjectionByID(ctx, e.GetAggregateID())
 		if err != nil {
-			return fmt.Errorf("OrderProjectionRepository.HandleEvent OrderCancelled find: %w", err)
+			return apperrors.Infrastructure("注文プロジェクションの取得に失敗", err)
 		}
 		if existing == nil {
 			return nil
@@ -86,7 +86,7 @@ func (r *OrderProjectionRepository) HandleEvent(ctx context.Context, event domai
 		existing.Status = "canceled"
 		existing.UpdatedAt = e.OccurredAt
 		if err := r.ds.UpsertOrderProjection(ctx, existing); err != nil {
-			return fmt.Errorf("OrderProjectionRepository.HandleEvent OrderCancelled upsert: %w", err)
+			return apperrors.Infrastructure("注文プロジェクションの保存に失敗", err)
 		}
 	}
 	return nil
@@ -97,10 +97,10 @@ func (r *OrderProjectionRepository) HandleEvent(ctx context.Context, event domai
 func (r *OrderProjectionRepository) FindByID(ctx context.Context, orderID string) (*order.OrderStateRow, error) {
 	row, err := r.ds.FindOrderProjectionByID(ctx, orderID)
 	if err != nil {
-		return nil, fmt.Errorf("OrderProjectionRepository.FindByID: %w", err)
+		return nil, apperrors.Infrastructure("注文プロジェクションの取得に失敗", err)
 	}
 	if row == nil {
-		return nil, fmt.Errorf("order projection not found: %s", orderID)
+		return nil, apperrors.NotFound("order_projection", orderID)
 	}
 	return projectionRowToStateRow(row), nil
 }
@@ -110,7 +110,7 @@ func (r *OrderProjectionRepository) FindByID(ctx context.Context, orderID string
 func (r *OrderProjectionRepository) FindAll(ctx context.Context) ([]order.OrderStateRow, error) {
 	rows, err := r.ds.FindAllOrderProjections(ctx)
 	if err != nil {
-		return nil, fmt.Errorf("OrderProjectionRepository.FindAll: %w", err)
+		return nil, apperrors.Infrastructure("注文プロジェクション一覧の取得に失敗", err)
 	}
 	result := make([]order.OrderStateRow, 0, len(rows))
 	for i := range rows {

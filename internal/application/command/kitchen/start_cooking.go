@@ -4,8 +4,8 @@ import (
 	"context"
 	"fmt"
 
-	"mendo/internal/domain/contract"
 	"mendo/internal/domain"
+	"mendo/internal/domain/contract"
 	kitchendomain "mendo/internal/domain/kitchen"
 	"mendo/internal/domain/order"
 )
@@ -29,7 +29,7 @@ func (uc *StartCookingUsecase) HandleOrderConfirmedPublic(ctx context.Context, e
 	// 1. 厨房集約をロード
 	k, err := uc.kitchenReader.FindByID(ctx, uc.kitchenID)
 	if err != nil {
-		return fmt.Errorf("failed to find kitchen: %w", err)
+		return err
 	}
 
 	// 2. 公開イベントから CookingInstruction を組み立てる
@@ -46,7 +46,7 @@ func (uc *StartCookingUsecase) HandleOrderConfirmedPublic(ctx context.Context, e
 	if err := k.AddCookingTask(order.OrderID(event.OrderID), instructions); err != nil {
 		// フル稼働 → CookingRejected を Publish して補償アクションに委ねる
 		if pubErr := uc.publisher.Publish(ctx, k.DomainEvents()...); pubErr != nil {
-			return fmt.Errorf("failed to publish rejection: %w", pubErr)
+			return pubErr
 		}
 		fmt.Printf("[Saga] CookingTask 失敗 → CookingRejected を発行 (orderID: %s)\n", event.OrderID)
 		return nil // subscriber 全体のエラーにはしない
@@ -54,7 +54,7 @@ func (uc *StartCookingUsecase) HandleOrderConfirmedPublic(ctx context.Context, e
 
 	// 4. 保存
 	if err := uc.kitchenWriter.Save(ctx, k); err != nil {
-		return fmt.Errorf("failed to save kitchen: %w", err)
+		return err
 	}
 	return nil
 }

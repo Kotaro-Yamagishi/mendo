@@ -84,7 +84,7 @@ func Test_EventStoreRepo_Save_バリエーション(t *testing.T) {
 				order.NewOrderCreated("order-1", 1, ""),
 			},
 			wantErr:         true,
-			wantErrContains: "InsertEvents",
+			wantErrContains: "イベントの保存に失敗",
 		},
 	}
 
@@ -182,7 +182,7 @@ func Test_EventStoreRepo_Load_バリエーション(t *testing.T) {
 			name:            "FindError が伝播する",
 			findErr:         errors.New("db error"),
 			wantErr:         true,
-			wantErrContains: "Load",
+			wantErrContains: "イベントの取得に失敗",
 		},
 	}
 

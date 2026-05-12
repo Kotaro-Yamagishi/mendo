@@ -2,7 +2,6 @@ package menu
 
 import (
 	"context"
-	"fmt"
 
 	"github.com/google/uuid"
 
@@ -12,7 +11,7 @@ import (
 // ImportMenusUsecase はメニュー一括インポートの受付ユースケース。
 // CSV を受け取ってジョブを作成し、ワーカーに投げて即座に返す。
 type ImportMenusUsecase struct {
-	jobWriter  importjob.JobWriter
+	jobWriter   importjob.JobWriter
 	jobEnqueuer importjob.JobEnqueuer
 }
 
@@ -29,7 +28,7 @@ func (uc *ImportMenusUsecase) Execute(ctx context.Context, rows []importjob.Impo
 
 	// 2. ジョブを保存（プログレス確認用）
 	if err := uc.jobWriter.Save(ctx, job); err != nil {
-		return "", fmt.Errorf("failed to save import job: %w", err)
+		return "", err
 	}
 
 	// 3. ワーカーに投げる（非同期。即座に返る）

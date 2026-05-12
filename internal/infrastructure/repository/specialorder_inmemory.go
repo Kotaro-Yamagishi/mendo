@@ -2,9 +2,9 @@ package repository
 
 import (
 	"context"
-	"fmt"
 	"sync"
 
+	"mendo/internal/apperrors"
 	"mendo/internal/domain/specialorder"
 )
 
@@ -22,7 +22,7 @@ func (r *InMemorySpecialOrderRepository) FindByID(_ context.Context, id specialo
 	defer r.mu.RUnlock()
 	so, ok := r.orders[string(id)]
 	if !ok {
-		return nil, fmt.Errorf("special order not found: %s", id)
+		return nil, apperrors.NotFound("special_order", string(id))
 	}
 	return so, nil
 }

@@ -2,20 +2,18 @@ package handler
 
 import (
 	"encoding/json"
-	"fmt"
 	"log"
 	"net/http"
+
+	"mendo/internal/apperrors"
 )
 
 type successResponse struct {
 	Data interface{} `json:"data"`
 }
 
-type errorResponse struct {
-	Error string `json:"error"`
-}
-
-func writeSuccess(w http.ResponseWriter, status int, data interface{}) {
+// WriteSuccess は成功レスポンスを JSON で書き込む。外部パッケージ（staff, closing 等）から利用可能。
+func WriteSuccess(w http.ResponseWriter, status int, data interface{}) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(status)
 	if err := json.NewEncoder(w).Encode(successResponse{Data: data}); err != nil {
@@ -23,17 +21,9 @@ func writeSuccess(w http.ResponseWriter, status int, data interface{}) {
 	}
 }
 
-func writeError(w http.ResponseWriter, status int, msg string) {
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(status)
-	if err := json.NewEncoder(w).Encode(errorResponse{Error: msg}); err != nil {
-		log.Printf("failed to write error response: %v", err)
-	}
-}
-
 func readJSON(r *http.Request, v interface{}) error {
 	if err := json.NewDecoder(r.Body).Decode(v); err != nil {
-		return fmt.Errorf("failed to decode request body: %w", err)
+		return apperrors.Validation("INVALID_REQUEST_BODY", "リクエストの形式が不正です").WithCause(err)
 	}
 	return nil
 }

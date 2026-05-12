@@ -2,8 +2,8 @@ package repository
 
 import (
 	"context"
-	"fmt"
 
+	"mendo/internal/apperrors"
 	"mendo/internal/domain/menu"
 	"mendo/internal/infrastructure/datasource"
 )
@@ -22,10 +22,10 @@ func NewMenuRepository(ds datasource.MenuDataSource) *MenuRepository {
 func (r *MenuRepository) FindByID(ctx context.Context, id menu.MenuID) (*menu.Menu, error) {
 	row, err := r.ds.FindMenuByID(ctx, id.String())
 	if err != nil {
-		return nil, fmt.Errorf("MenuRepository.FindByID: %w", err)
+		return nil, apperrors.Infrastructure("メニューの取得に失敗", err)
 	}
 	if row == nil {
-		return nil, fmt.Errorf("menu not found: %s", id)
+		return nil, apperrors.NotFound("menu", id.String())
 	}
 	return rowToMenu(row)
 }
@@ -34,7 +34,7 @@ func (r *MenuRepository) FindByID(ctx context.Context, id menu.MenuID) (*menu.Me
 func (r *MenuRepository) FindAll(ctx context.Context) ([]*menu.Menu, error) {
 	rows, err := r.ds.FindAllMenus(ctx)
 	if err != nil {
-		return nil, fmt.Errorf("MenuRepository.FindAll: %w", err)
+		return nil, apperrors.Infrastructure("メニュー一覧の取得に失敗", err)
 	}
 	menus := make([]*menu.Menu, 0, len(rows))
 	for i := range rows {
@@ -56,7 +56,7 @@ func (r *MenuRepository) Save(ctx context.Context, m *menu.Menu) error {
 		Available: m.IsAvailable(),
 	}
 	if err := r.ds.InsertMenu(ctx, row); err != nil {
-		return fmt.Errorf("MenuRepository.Save: %w", err)
+		return apperrors.Infrastructure("メニューの保存に失敗", err)
 	}
 	return nil
 }
@@ -64,11 +64,11 @@ func (r *MenuRepository) Save(ctx context.Context, m *menu.Menu) error {
 func rowToMenu(row *datasource.MenuRow) (*menu.Menu, error) {
 	name, err := menu.NewMenuName(row.Name)
 	if err != nil {
-		return nil, fmt.Errorf("rowToMenu NewMenuName: %w", err)
+		return nil, apperrors.Infrastructure("メニュー名の変換に失敗", err)
 	}
 	price, err := menu.NewPrice(row.Price)
 	if err != nil {
-		return nil, fmt.Errorf("rowToMenu NewPrice: %w", err)
+		return nil, apperrors.Infrastructure("メニュー価格の変換に失敗", err)
 	}
 	return menu.ReconstructMenu(menu.MenuID(row.MenuID), name, price, row.Available), nil
 }

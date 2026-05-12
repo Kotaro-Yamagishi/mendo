@@ -2,9 +2,9 @@ package repository
 
 import (
 	"context"
-	"fmt"
 	"sync"
 
+	"mendo/internal/apperrors"
 	"mendo/internal/domain/menu"
 )
 
@@ -22,7 +22,7 @@ func (r *InMemoryMenuRepository) FindByID(_ context.Context, id menu.MenuID) (*m
 	defer r.mu.RUnlock()
 	m, ok := r.menus[string(id)]
 	if !ok {
-		return nil, fmt.Errorf("menu not found: %s", id)
+		return nil, apperrors.NotFound("menu", string(id))
 	}
 	return m, nil
 }

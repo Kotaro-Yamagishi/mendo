@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 
+	"mendo/internal/apperrors"
 	"mendo/internal/di"
 	"mendo/internal/domain"
 	"mendo/internal/domain/kitchen"
@@ -17,7 +18,7 @@ func registerKitchenSubscribers(bus *eventbus.WatermillEventBus, app *di.App) {
 		app.OrderBoard.ApplyKitchenEvent(event)
 		completed, ok := event.(kitchen.CookingCompleted)
 		if !ok {
-			return fmt.Errorf("unexpected event type: %T", event)
+			return apperrors.Infrastructure("予期しないイベント型", fmt.Errorf("got %T", event))
 		}
 		fmt.Printf("[EventBus] CookingCompleted → 提供通知 + ボード更新 (orderID: %s)\n", completed.OrderID)
 		return nil
@@ -27,7 +28,7 @@ func registerKitchenSubscribers(bus *eventbus.WatermillEventBus, app *di.App) {
 	bus.Subscribe(kitchen.EventTypeCookingRejected, func(ctx context.Context, event domain.Event) error {
 		rejected, ok := event.(kitchen.CookingRejected)
 		if !ok {
-			return fmt.Errorf("unexpected event type: %T", event)
+			return apperrors.Infrastructure("予期しないイベント型", fmt.Errorf("got %T", event))
 		}
 		fmt.Printf("[Saga] CookingRejected → 補償アクション: Order をキャンセル (orderID: %s, reason: %s)\n", rejected.OrderID, rejected.Reason)
 		return app.CancelOrderUC.Execute(ctx, rejected.OrderID, "厨房フル稼働のため自動キャンセル")

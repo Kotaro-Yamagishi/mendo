@@ -2,8 +2,8 @@ package repository
 
 import (
 	"context"
-	"fmt"
 
+	"mendo/internal/apperrors"
 	"mendo/internal/domain"
 	"mendo/internal/domain/kitchen"
 	"mendo/internal/domain/order"
@@ -32,13 +32,13 @@ func (r *OrderBoardRepository) ApplyOrderEvent(ctx context.Context, event domain
 			OrderedAt:     &e.OccurredAt,
 		}
 		if err := r.ds.UpsertOrderBoardRow(ctx, row); err != nil {
-			return fmt.Errorf("OrderBoardRepository.ApplyOrderEvent OrderCreated: %w", err)
+			return apperrors.Infrastructure("注文ボードの保存に失敗", err)
 		}
 
 	case order.OrderConfirmed:
 		existing, err := r.ds.FindOrderBoardRowByID(ctx, e.GetAggregateID())
 		if err != nil {
-			return fmt.Errorf("OrderBoardRepository.ApplyOrderEvent OrderConfirmed find: %w", err)
+			return apperrors.Infrastructure("注文ボードの取得に失敗", err)
 		}
 		if existing == nil {
 			return nil
@@ -46,13 +46,13 @@ func (r *OrderBoardRepository) ApplyOrderEvent(ctx context.Context, event domain
 		existing.OrderStatus = "confirmed"
 		existing.CookingStatus = "waiting"
 		if err := r.ds.UpsertOrderBoardRow(ctx, existing); err != nil {
-			return fmt.Errorf("OrderBoardRepository.ApplyOrderEvent OrderConfirmed upsert: %w", err)
+			return apperrors.Infrastructure("注文ボードの保存に失敗", err)
 		}
 
 	case order.OrderCancelled:
 		existing, err := r.ds.FindOrderBoardRowByID(ctx, e.GetAggregateID())
 		if err != nil {
-			return fmt.Errorf("OrderBoardRepository.ApplyOrderEvent OrderCancelled find: %w", err)
+			return apperrors.Infrastructure("注文ボードの取得に失敗", err)
 		}
 		if existing == nil {
 			return nil
@@ -60,7 +60,7 @@ func (r *OrderBoardRepository) ApplyOrderEvent(ctx context.Context, event domain
 		existing.OrderStatus = "canceled"
 		existing.CookingStatus = ""
 		if err := r.ds.UpsertOrderBoardRow(ctx, existing); err != nil {
-			return fmt.Errorf("OrderBoardRepository.ApplyOrderEvent OrderCancelled upsert: %w", err)
+			return apperrors.Infrastructure("注文ボードの保存に失敗", err)
 		}
 	}
 	return nil
@@ -71,7 +71,7 @@ func (r *OrderBoardRepository) ApplyKitchenEvent(ctx context.Context, event doma
 	if e, ok := event.(kitchen.CookingCompleted); ok {
 		existing, err := r.ds.FindOrderBoardRowByID(ctx, string(e.OrderID))
 		if err != nil {
-			return fmt.Errorf("OrderBoardRepository.ApplyKitchenEvent find: %w", err)
+			return apperrors.Infrastructure("注文ボードの取得に失敗", err)
 		}
 		if existing == nil {
 			return nil
@@ -80,7 +80,7 @@ func (r *OrderBoardRepository) ApplyKitchenEvent(ctx context.Context, event doma
 		cookingAt := e.OccurredAt
 		existing.CookingAt = &cookingAt
 		if err := r.ds.UpsertOrderBoardRow(ctx, existing); err != nil {
-			return fmt.Errorf("OrderBoardRepository.ApplyKitchenEvent upsert: %w", err)
+			return apperrors.Infrastructure("注文ボードの保存に失敗", err)
 		}
 	}
 	return nil
@@ -90,7 +90,7 @@ func (r *OrderBoardRepository) ApplyKitchenEvent(ctx context.Context, event doma
 func (r *OrderBoardRepository) FindAll(ctx context.Context) ([]OrderBoardEntry, error) {
 	rows, err := r.ds.FindAllOrderBoardRows(ctx)
 	if err != nil {
-		return nil, fmt.Errorf("OrderBoardRepository.FindAll: %w", err)
+		return nil, apperrors.Infrastructure("注文ボード一覧の取得に失敗", err)
 	}
 	entries := make([]OrderBoardEntry, 0, len(rows))
 	for _, row := range rows {

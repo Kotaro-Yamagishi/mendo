@@ -2,9 +2,9 @@ package importworker
 
 import (
 	"context"
-	"fmt"
 	"sync"
 
+	"mendo/internal/apperrors"
 	importjob "mendo/internal/domain/import"
 )
 
@@ -33,7 +33,7 @@ func (s *InMemoryJobStore) FindByID(_ context.Context, id importjob.JobID) (*imp
 	defer s.mu.RUnlock()
 	job, ok := s.jobs[string(id)]
 	if !ok {
-		return nil, fmt.Errorf("import job not found: %s", id)
+		return nil, apperrors.NotFound("import_job", string(id))
 	}
 	return job, nil
 }

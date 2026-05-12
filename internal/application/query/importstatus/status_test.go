@@ -2,10 +2,10 @@ package importstatus_test
 
 import (
 	"context"
-	"errors"
 	"testing"
 
 	"mendo/internal/application/query/importstatus"
+	"mendo/internal/apperrors"
 	importjob "mendo/internal/domain/import"
 	"mendo/internal/testutil"
 )
@@ -52,8 +52,9 @@ func TestImportStatusHandler_Handle_Success(t *testing.T) {
 
 func TestImportStatusHandler_Handle_NotFound(t *testing.T) {
 	t.Parallel()
-	findErr := errors.New("job not found")
-	stubReader := &testutil.StubJobReader{FindErr: findErr}
+	// FindErr を設定してリポジトリが失敗するシナリオ。
+	// importstatus は FindByID エラーを apperrors.NotFound に変換する。
+	stubReader := &testutil.StubJobReader{FindErr: apperrors.NotFound("import_job", "unknown-job")}
 	h := importstatus.NewImportStatusHandler(stubReader)
 
 	_, err := h.Handle(context.Background(), "unknown-job")
@@ -61,7 +62,7 @@ func TestImportStatusHandler_Handle_NotFound(t *testing.T) {
 	if err == nil {
 		t.Fatal("expected error, got nil")
 	}
-	if !errors.Is(err, findErr) {
-		t.Errorf("expected wrapped find error, got: %v", err)
+	if !apperrors.IsCode(err, "NOT_FOUND") {
+		t.Errorf("expected NOT_FOUND code, got: %v", err)
 	}
 }

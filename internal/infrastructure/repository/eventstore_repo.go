@@ -3,10 +3,10 @@ package repository
 import (
 	"context"
 	"encoding/json"
-	"fmt"
 	"time"
 
 	"github.com/google/uuid"
+	"mendo/internal/apperrors"
 	"mendo/internal/domain"
 	"mendo/internal/domain/kitchen"
 	"mendo/internal/domain/order"
@@ -34,7 +34,7 @@ func (r *EventStoreRepository) Save(ctx context.Context, events []domain.Event) 
 	aggregateID := events[0].GetAggregateID()
 	existing, err := r.ds.FindEventsByAggregateID(ctx, aggregateID)
 	if err != nil {
-		return fmt.Errorf("EventStoreRepository.Save load existing: %w", err)
+		return apperrors.Infrastructure("イベントの取得に失敗", err)
 	}
 	versionOffset := len(existing)
 
@@ -42,7 +42,7 @@ func (r *EventStoreRepository) Save(ctx context.Context, events []domain.Event) 
 	for i, event := range events {
 		payload, err := marshalEvent(event)
 		if err != nil {
-			return fmt.Errorf("EventStoreRepository.Save marshal[%d]: %w", i, err)
+			return apperrors.Infrastructure("イベントの変換に失敗", err)
 		}
 		rows = append(rows, datasource.EventRow{
 			EventID:       uuid.New().String(),
@@ -55,7 +55,7 @@ func (r *EventStoreRepository) Save(ctx context.Context, events []domain.Event) 
 		})
 	}
 	if err := r.ds.InsertEvents(ctx, rows); err != nil {
-		return fmt.Errorf("EventStoreRepository.Save InsertEvents: %w", err)
+		return apperrors.Infrastructure("イベントの保存に失敗", err)
 	}
 	return nil
 }
@@ -65,14 +65,14 @@ func (r *EventStoreRepository) Save(ctx context.Context, events []domain.Event) 
 func (r *EventStoreRepository) Load(ctx context.Context, aggregateID string) ([]domain.Event, error) {
 	rows, err := r.ds.FindEventsByAggregateID(ctx, aggregateID)
 	if err != nil {
-		return nil, fmt.Errorf("EventStoreRepository.Load: %w", err)
+		return nil, apperrors.Infrastructure("イベントの取得に失敗", err)
 	}
 
 	events := make([]domain.Event, 0, len(rows))
 	for _, row := range rows {
 		event, err := unmarshalEvent(row)
 		if err != nil {
-			return nil, fmt.Errorf("EventStoreRepository.Load unmarshal %s: %w", row.EventType, err)
+			return nil, apperrors.Infrastructure("イベントの変換に失敗", err)
 		}
 		events = append(events, event)
 	}

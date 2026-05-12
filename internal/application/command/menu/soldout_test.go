@@ -2,13 +2,12 @@ package menu_test
 
 import (
 	"context"
-	"errors"
 	"testing"
 
+	appmenu "mendo/internal/application/command/menu"
+	"mendo/internal/apperrors"
 	"mendo/internal/domain/menu"
 	"mendo/internal/testutil"
-
-	appmenu "mendo/internal/application/command/menu"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -40,25 +39,25 @@ func Test_SoldOutMenu_異常系(t *testing.T) {
 	m := menu.NewMenu(menu.MenuID("menu-1"), name, price)
 
 	tests := []struct {
-		name    string
-		setup   func() (*testutil.StubMenuReader, *testutil.SpyMenuWriter)
-		wantErr string
+		name     string
+		setup    func() (*testutil.StubMenuReader, *testutil.SpyMenuWriter)
+		wantCode string
 	}{
 		{
 			name: "メニュー見つからない",
 			setup: func() (*testutil.StubMenuReader, *testutil.SpyMenuWriter) {
-				return &testutil.StubMenuReader{FindErr: errors.New("not found")},
+				return &testutil.StubMenuReader{FindErr: apperrors.Infrastructure("menu not found", nil)},
 					&testutil.SpyMenuWriter{}
 			},
-			wantErr: "find menu",
+			wantCode: "INTERNAL_ERROR",
 		},
 		{
 			name: "Save失敗",
 			setup: func() (*testutil.StubMenuReader, *testutil.SpyMenuWriter) {
 				return &testutil.StubMenuReader{Menu: m},
-					&testutil.SpyMenuWriter{SaveErr: errors.New("save failed")}
+					&testutil.SpyMenuWriter{SaveErr: apperrors.Infrastructure("save failed", nil)}
 			},
-			wantErr: "save menu",
+			wantCode: "INTERNAL_ERROR",
 		},
 	}
 	for _, tt := range tests {
@@ -70,7 +69,7 @@ func Test_SoldOutMenu_異常系(t *testing.T) {
 			err := uc.Execute(context.Background(), menu.MenuID("menu-1"))
 
 			require.Error(t, err)
-			assert.Contains(t, err.Error(), tt.wantErr)
+			assert.True(t, apperrors.IsCode(err, tt.wantCode), "got: %v", err)
 		})
 	}
 }

@@ -2,7 +2,6 @@ package order
 
 import (
 	"context"
-	"fmt"
 
 	"mendo/internal/domain"
 	"mendo/internal/domain/menu"
@@ -43,23 +42,23 @@ func (uc *CreateOrderUsecase) Execute(ctx context.Context, input CreateOrderInpu
 	// 3. 注文明細を追加（ItemAdded イベントが uncommitted に積まれる）
 	for _, itemInput := range input.Items {
 		if err := o.AddItem(menu.MenuID(itemInput.MenuID), itemInput.Toppings, itemInput.Hardness); err != nil {
-			return "", fmt.Errorf("failed to add item: %w", err)
+			return "", err // domain の AppError をそのまま返す
 		}
 	}
 
 	// 4. 未コミットイベントをイベントストアに保存
 	if err := uc.eventStore.Save(ctx, o.UncommittedEvents()); err != nil {
-		return "", fmt.Errorf("failed to save events: %w", err)
+		return "", err
 	}
 
 	// 5. Outbox にイベントを保存
 	if err := uc.outbox.Store(ctx, o.UncommittedEvents()); err != nil {
-		return "", fmt.Errorf("failed to store events in outbox: %w", err)
+		return "", err
 	}
 
 	// 6. EventBus に Publish（Projection 更新や後続ユースケースの起動）
 	if err := uc.publisher.Publish(ctx, o.UncommittedEvents()...); err != nil {
-		return "", fmt.Errorf("failed to publish events: %w", err)
+		return "", err
 	}
 
 	// 7. イベントをクリア

@@ -2,9 +2,10 @@ package staff
 
 import (
 	"encoding/json"
-	"fmt"
-	"log"
 	"net/http"
+
+	"mendo/internal/apperrors"
+	"mendo/internal/interface/handler"
 )
 
 // Handler はスタッフ管理の HTTP ハンドラ。
@@ -17,56 +18,40 @@ func NewHandler(store *Store) *Handler {
 	return &Handler{store: store}
 }
 
-func (h *Handler) RegisterRoutes(mux *http.ServeMux) {
-	mux.HandleFunc("GET /staff", h.HandleList)
-	mux.HandleFunc("GET /staff/{id}", h.HandleGetByID)
-	mux.HandleFunc("POST /staff", h.HandleCreate)
-	mux.HandleFunc("DELETE /staff/{id}", h.HandleDelete)
-}
-
-func (h *Handler) HandleList(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) HandleList(w http.ResponseWriter, r *http.Request) error {
 	staffs, err := h.store.FindAll(r.Context())
 	if err != nil {
-		http.Error(w, fmt.Errorf("failed to list staff: %w", err).Error(), http.StatusInternalServerError)
-		return
+		return err
 	}
-	writeJSON(w, http.StatusOK, staffs)
+	handler.WriteSuccess(w, http.StatusOK, staffs)
+	return nil
 }
 
-func (h *Handler) HandleGetByID(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) HandleGetByID(w http.ResponseWriter, r *http.Request) error {
 	s, err := h.store.FindByID(r.Context(), r.PathValue("id"))
 	if err != nil {
-		http.Error(w, fmt.Errorf("failed to find staff: %w", err).Error(), http.StatusNotFound)
-		return
+		return err
 	}
-	writeJSON(w, http.StatusOK, s)
+	handler.WriteSuccess(w, http.StatusOK, s)
+	return nil
 }
 
-func (h *Handler) HandleCreate(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) HandleCreate(w http.ResponseWriter, r *http.Request) error {
 	var s Staff
 	if err := json.NewDecoder(r.Body).Decode(&s); err != nil {
-		http.Error(w, "invalid request body", http.StatusBadRequest)
-		return
+		return apperrors.Validation("INVALID_REQUEST_BODY", "invalid request body")
 	}
 	if err := h.store.Save(r.Context(), &s); err != nil {
-		http.Error(w, err.Error(), http.StatusUnprocessableEntity)
-		return
+		return err
 	}
-	writeJSON(w, http.StatusCreated, s)
+	handler.WriteSuccess(w, http.StatusCreated, s)
+	return nil
 }
 
-func (h *Handler) HandleDelete(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) HandleDelete(w http.ResponseWriter, r *http.Request) error {
 	if err := h.store.Delete(r.Context(), r.PathValue("id")); err != nil {
-		http.Error(w, fmt.Errorf("failed to delete staff: %w", err).Error(), http.StatusNotFound)
-		return
+		return err
 	}
-	writeJSON(w, http.StatusOK, map[string]string{"status": "deleted"})
-}
-
-func writeJSON(w http.ResponseWriter, status int, data interface{}) {
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(status)
-	if err := json.NewEncoder(w).Encode(data); err != nil {
-		log.Printf("failed to write response: %v", err)
-	}
+	handler.WriteSuccess(w, http.StatusOK, map[string]string{"status": "deleted"})
+	return nil
 }

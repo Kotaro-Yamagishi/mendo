@@ -70,7 +70,7 @@ func Test_DLQHandler_HandleList(t *testing.T) {
 			wantDataLen: 0,
 		},
 		{
-			name:        "DLQ取得エラー",
+			name:        "DLQ取得エラー_インフラエラーは500",
 			dlq:         &testutil.StubDeadLetterQueue{ListErr: errors.New("db error")},
 			wantStatus:  http.StatusInternalServerError,
 			wantDataLen: -1,
@@ -87,7 +87,7 @@ func Test_DLQHandler_HandleList(t *testing.T) {
 			req := httptest.NewRequest(http.MethodGet, "/admin/dlq", nil)
 			rec := httptest.NewRecorder()
 
-			h.HandleList(rec, req)
+			wrap(h.HandleList)(rec, req)
 
 			assert.Equal(t, tt.wantStatus, rec.Code)
 
@@ -147,11 +147,11 @@ func Test_DLQHandler_HandleRetry(t *testing.T) {
 			wantRespStatus: "retried",
 		},
 		{
-			name:           "存在しないID",
-			dlq:            &testutil.StubDeadLetterQueue{FindErr: errors.New("not found")},
-			pathID:         "nonexistent",
-			wantStatus:     http.StatusUnprocessableEntity,
-			wantPublished:  0,
+			name:          "存在しないID_NotFoundは404",
+			dlq:           &testutil.StubDeadLetterQueue{FindErr: errors.New("not found")},
+			pathID:        "nonexistent",
+			wantStatus:    http.StatusNotFound,
+			wantPublished: 0,
 		},
 	}
 
@@ -166,7 +166,7 @@ func Test_DLQHandler_HandleRetry(t *testing.T) {
 			req.SetPathValue("id", tt.pathID)
 			rec := httptest.NewRecorder()
 
-			h.HandleRetry(rec, req)
+			wrap(h.HandleRetry)(rec, req)
 
 			assert.Equal(t, tt.wantStatus, rec.Code)
 			require.Len(t, pub.Published, tt.wantPublished)

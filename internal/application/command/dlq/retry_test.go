@@ -6,6 +6,7 @@ import (
 	"testing"
 	"time"
 
+	"mendo/internal/apperrors"
 	"mendo/internal/application/command/dlq"
 	"mendo/internal/domain"
 	"mendo/internal/testutil"
@@ -43,25 +44,26 @@ func TestRetryDLQUsecase_Execute_Success(t *testing.T) {
 func Test_RetryDLQ_異常系(t *testing.T) {
 	t.Parallel()
 
-	findErr := errors.New("db error")
-	publishErr := errors.New("publish failed")
-	removeErr := errors.New("remove failed")
+	findErr := apperrors.Infrastructure("db error", nil)
+	publishErr := apperrors.Infrastructure("publish failed", nil)
+	removeErr := apperrors.Infrastructure("remove failed", nil)
 
 	tests := []struct {
 		name           string
 		stubDLQ        *testutil.StubDeadLetterQueue
 		spyPub         *testutil.SpyEventPublisher
 		letterID       string
-		wantErr        error
+		wantCode       string  // apperrors コードで検証
+		wantCause      error   // Cause による検証（WrappedError の場合）
 		wantPublished  int
 		wantRemovedIDs int
 	}{
 		{
-			name:           "FindByID失敗",
+			name:           "FindByID失敗_NotFoundコード",
 			stubDLQ:        &testutil.StubDeadLetterQueue{FindErr: findErr},
 			spyPub:         &testutil.SpyEventPublisher{},
 			letterID:       "letter-1",
-			wantErr:        findErr,
+			wantCode:       "NOT_FOUND",
 			wantPublished:  0,
 			wantRemovedIDs: 0,
 		},
@@ -70,7 +72,8 @@ func Test_RetryDLQ_異常系(t *testing.T) {
 			stubDLQ:        &testutil.StubDeadLetterQueue{SingleLetter: newTestDeadLetter("letter-2")},
 			spyPub:         &testutil.SpyEventPublisher{PublishErr: publishErr},
 			letterID:       "letter-2",
-			wantErr:        publishErr,
+			wantCode:       "INTERNAL_ERROR",
+			wantCause:      publishErr,
 			wantPublished:  0,
 			wantRemovedIDs: 0,
 		},
@@ -79,7 +82,8 @@ func Test_RetryDLQ_異常系(t *testing.T) {
 			stubDLQ:        &testutil.StubDeadLetterQueue{SingleLetter: newTestDeadLetter("letter-3"), RemoveErr: removeErr},
 			spyPub:         &testutil.SpyEventPublisher{},
 			letterID:       "letter-3",
-			wantErr:        removeErr,
+			wantCode:       "INTERNAL_ERROR",
+			wantCause:      removeErr,
 			wantPublished:  1, // Publish は成功した後に Remove が失敗する
 			wantRemovedIDs: 0,
 		},
@@ -96,8 +100,11 @@ func Test_RetryDLQ_異常系(t *testing.T) {
 			if err == nil {
 				t.Fatal("expected error, got nil")
 			}
-			if !errors.Is(err, tc.wantErr) {
-				t.Errorf("expected wrapped error %v, got: %v", tc.wantErr, err)
+			if !apperrors.IsCode(err, tc.wantCode) {
+				t.Errorf("expected code %s, got: %v", tc.wantCode, err)
+			}
+			if tc.wantCause != nil && !errors.Is(err, tc.wantCause) {
+				t.Errorf("expected cause %v, got: %v", tc.wantCause, err)
 			}
 			if len(tc.spyPub.Published) != tc.wantPublished {
 				t.Errorf("expected %d published events, got: %d", tc.wantPublished, len(tc.spyPub.Published))

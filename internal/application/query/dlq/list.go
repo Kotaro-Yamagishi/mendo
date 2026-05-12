@@ -2,7 +2,6 @@ package dlq
 
 import (
 	"context"
-	"fmt"
 
 	"mendo/internal/domain"
 )
@@ -18,7 +17,7 @@ func NewListDLQHandler(dlq domain.DeadLetterQueue) *ListDLQHandler {
 func (h *ListDLQHandler) Handle(ctx context.Context) ([]domain.DeadLetter, error) {
 	letters, err := h.dlq.List(ctx)
 	if err != nil {
-		return nil, fmt.Errorf("failed to list dead letters: %w", err)
+		return nil, err
 	}
 	return letters, nil
 }

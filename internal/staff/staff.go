@@ -2,10 +2,11 @@ package staff
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"strings"
 	"sync"
+
+	"mendo/internal/apperrors"
 )
 
 // Staff はアクティブレコードパターンで実装されたスタッフ管理。
@@ -27,14 +28,14 @@ type Staff struct {
 // Validate はバリデーション。業務ルールはこれだけ。
 func (s *Staff) Validate() error {
 	if strings.TrimSpace(s.Name) == "" {
-		return errors.New("名前は必須です")
+		return apperrors.Validation("STAFF_REQUIRED_NAME", "名前は必須です")
 	}
 	if !strings.Contains(s.Phone, "-") || len(s.Phone) < 10 {
-		return errors.New("電話番号の形式が不正です（例: 090-1234-5678）")
+		return apperrors.Validation("STAFF_INVALID_PHONE", "電話番号の形式が不正です（例: 090-1234-5678）")
 	}
 	validShifts := map[string]bool{"morning": true, "afternoon": true, "night": true}
 	if !validShifts[s.ShiftType] {
-		return fmt.Errorf("シフト区分は morning/afternoon/night のいずれか: %s", s.ShiftType)
+		return apperrors.Validation("STAFF_INVALID_SHIFT_TYPE", "シフト区分は morning/afternoon/night のいずれか")
 	}
 	return nil
 }
@@ -52,7 +53,7 @@ func NewStore() *Store {
 
 func (store *Store) Save(_ context.Context, s *Staff) error {
 	if err := s.Validate(); err != nil {
-		return fmt.Errorf("validation failed: %w", err)
+		return err
 	}
 	store.mu.Lock()
 	defer store.mu.Unlock()
@@ -69,7 +70,7 @@ func (store *Store) FindByID(_ context.Context, id string) (*Staff, error) {
 	defer store.mu.RUnlock()
 	s, ok := store.staffs[id]
 	if !ok {
-		return nil, fmt.Errorf("staff not found: %s", id)
+		return nil, apperrors.NotFound("staff", id)
 	}
 	return s, nil
 }
@@ -88,7 +89,7 @@ func (store *Store) Delete(_ context.Context, id string) error {
 	store.mu.Lock()
 	defer store.mu.Unlock()
 	if _, ok := store.staffs[id]; !ok {
-		return fmt.Errorf("staff not found: %s", id)
+		return apperrors.NotFound("staff", id)
 	}
 	delete(store.staffs, id)
 	return nil

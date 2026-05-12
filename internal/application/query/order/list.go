@@ -2,7 +2,6 @@ package order
 
 import (
 	"context"
-	"fmt"
 
 	"mendo/internal/domain/order"
 )
@@ -20,7 +19,7 @@ func NewListOrdersUsecase(pr order.ProjectionReader) *ListOrdersUsecase {
 func (uc *ListOrdersUsecase) Execute(ctx context.Context) ([]order.OrderStateRow, error) {
 	rows, err := uc.projectionReader.FindAll(ctx)
 	if err != nil {
-		return nil, fmt.Errorf("failed to list orders: %w", err)
+		return nil, err
 	}
 	return rows, nil
 }
@@ -28,7 +27,7 @@ func (uc *ListOrdersUsecase) Execute(ctx context.Context) ([]order.OrderStateRow
 func (uc *ListOrdersUsecase) FindByID(ctx context.Context, orderID string) (*order.OrderStateRow, error) {
 	row, err := uc.projectionReader.FindByID(ctx, orderID)
 	if err != nil {
-		return nil, fmt.Errorf("failed to find order: %w", err)
+		return nil, err
 	}
 	return row, nil
 }

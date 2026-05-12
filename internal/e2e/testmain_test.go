@@ -6,6 +6,7 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"log/slog"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -136,15 +137,20 @@ func setupServer() *httptest.Server {
 	specialOrderHandler := handler.NewSpecialOrderHandler(createSpecialOrderUC, approveSpecialOrderUC, rejectSpecialOrderUC, resubmitSpecialOrderUC)
 
 	// --- ルーティング ---
+	logger := slog.Default()
+	wrap := func(h handler.AppHandlerFunc) http.HandlerFunc {
+		return handler.ErrorMiddleware(h, logger)
+	}
+
 	mux := http.NewServeMux()
-	mux.HandleFunc("POST /orders", orderHandler.HandleCreate)
-	mux.HandleFunc("POST /orders/{id}/confirm", orderHandler.HandleConfirm)
-	mux.HandleFunc("POST /orders/{id}/cancel", orderHandler.HandleCancel)
-	mux.HandleFunc("POST /kitchen/complete", kitchenHandler.HandleCompleteCooking)
-	mux.HandleFunc("POST /special-orders", specialOrderHandler.HandleCreate)
-	mux.HandleFunc("POST /special-orders/{id}/approve", specialOrderHandler.HandleApprove)
-	mux.HandleFunc("POST /special-orders/{id}/reject", specialOrderHandler.HandleReject)
-	mux.HandleFunc("POST /special-orders/{id}/resubmit", specialOrderHandler.HandleResubmit)
+	mux.HandleFunc("POST /orders", wrap(orderHandler.HandleCreate))
+	mux.HandleFunc("POST /orders/{id}/confirm", wrap(orderHandler.HandleConfirm))
+	mux.HandleFunc("POST /orders/{id}/cancel", wrap(orderHandler.HandleCancel))
+	mux.HandleFunc("POST /kitchen/complete", wrap(kitchenHandler.HandleCompleteCooking))
+	mux.HandleFunc("POST /special-orders", wrap(specialOrderHandler.HandleCreate))
+	mux.HandleFunc("POST /special-orders/{id}/approve", wrap(specialOrderHandler.HandleApprove))
+	mux.HandleFunc("POST /special-orders/{id}/reject", wrap(specialOrderHandler.HandleReject))
+	mux.HandleFunc("POST /special-orders/{id}/resubmit", wrap(specialOrderHandler.HandleResubmit))
 
 	return httptest.NewServer(mux)
 }

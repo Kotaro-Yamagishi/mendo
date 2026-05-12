@@ -39,7 +39,7 @@ func Test_CreateSpecialOrder_Save失敗(t *testing.T) {
 	id, err := uc.Execute(context.Background(), "order-1", "特製つけ麺")
 
 	require.Error(t, err)
-	assert.Contains(t, err.Error(), "save special order")
+	assert.Contains(t, err.Error(), "db error")
 	assert.Empty(t, id)
 	assert.Empty(t, pub.Published, "Save 失敗時は Publish されない")
 }

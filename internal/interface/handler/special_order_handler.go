@@ -22,61 +22,58 @@ func NewSpecialOrderHandler(
 	return &SpecialOrderHandler{createUC: c, approveUC: a, rejectUC: r, resubmitUC: rs}
 }
 
-func (h *SpecialOrderHandler) HandleCreate(w http.ResponseWriter, r *http.Request) {
+func (h *SpecialOrderHandler) HandleCreate(w http.ResponseWriter, r *http.Request) error {
 	var body struct {
 		OrderID  string `json:"order_id"`
 		MenuName string `json:"menu_name"`
 	}
 	if err := readJSON(r, &body); err != nil {
-		writeError(w, http.StatusBadRequest, "invalid request body")
-		return
+		return err
 	}
 	id, err := h.createUC.Execute(r.Context(), body.OrderID, body.MenuName)
 	if err != nil {
-		writeError(w, http.StatusUnprocessableEntity, err.Error())
-		return
+		return err
 	}
-	writeSuccess(w, http.StatusCreated, map[string]string{"special_order_id": id, "status": "pending"})
+	WriteSuccess(w, http.StatusCreated, map[string]string{"special_order_id": id, "status": "pending"})
+	return nil
 }
 
-func (h *SpecialOrderHandler) HandleApprove(w http.ResponseWriter, r *http.Request) {
+func (h *SpecialOrderHandler) HandleApprove(w http.ResponseWriter, r *http.Request) error {
 	id := r.PathValue("id")
 	if err := h.approveUC.Execute(r.Context(), id); err != nil {
-		writeError(w, http.StatusUnprocessableEntity, err.Error())
-		return
+		return err
 	}
-	writeSuccess(w, http.StatusOK, map[string]string{"status": "approved_and_cooking"})
+	WriteSuccess(w, http.StatusOK, map[string]string{"status": "approved_and_cooking"})
+	return nil
 }
 
-func (h *SpecialOrderHandler) HandleReject(w http.ResponseWriter, r *http.Request) {
+func (h *SpecialOrderHandler) HandleReject(w http.ResponseWriter, r *http.Request) error {
 	id := r.PathValue("id")
 	var body struct {
 		Reason        string `json:"reason"`
 		SuggestedMenu string `json:"suggested_menu"`
 	}
 	if err := readJSON(r, &body); err != nil {
-		writeError(w, http.StatusBadRequest, "invalid request body")
-		return
+		return err
 	}
 	if err := h.rejectUC.Execute(r.Context(), id, body.Reason, body.SuggestedMenu); err != nil {
-		writeError(w, http.StatusUnprocessableEntity, err.Error())
-		return
+		return err
 	}
-	writeSuccess(w, http.StatusOK, map[string]string{"status": "rejected", "suggested_menu": body.SuggestedMenu})
+	WriteSuccess(w, http.StatusOK, map[string]string{"status": "rejected", "suggested_menu": body.SuggestedMenu})
+	return nil
 }
 
-func (h *SpecialOrderHandler) HandleResubmit(w http.ResponseWriter, r *http.Request) {
+func (h *SpecialOrderHandler) HandleResubmit(w http.ResponseWriter, r *http.Request) error {
 	id := r.PathValue("id")
 	var body struct {
 		MenuName string `json:"menu_name"`
 	}
 	if err := readJSON(r, &body); err != nil {
-		writeError(w, http.StatusBadRequest, "invalid request body")
-		return
+		return err
 	}
 	if err := h.resubmitUC.Execute(r.Context(), id, body.MenuName); err != nil {
-		writeError(w, http.StatusUnprocessableEntity, err.Error())
-		return
+		return err
 	}
-	writeSuccess(w, http.StatusOK, map[string]string{"status": "pending"})
+	WriteSuccess(w, http.StatusOK, map[string]string{"status": "pending"})
+	return nil
 }

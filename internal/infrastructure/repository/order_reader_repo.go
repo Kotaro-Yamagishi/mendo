@@ -2,8 +2,8 @@ package repository
 
 import (
 	"context"
-	"fmt"
 
+	"mendo/internal/apperrors"
 	"mendo/internal/infrastructure/datasource"
 )
 
@@ -22,7 +22,7 @@ func NewOrderReaderRepository(ds datasource.OrderProjectionDataSource) *OrderRea
 func (r *OrderReaderRepository) CountPending(ctx context.Context) (int, error) {
 	rows, err := r.ds.FindAllOrderProjections(ctx)
 	if err != nil {
-		return 0, fmt.Errorf("OrderReaderRepository.CountPending: %w", err)
+		return 0, apperrors.Infrastructure("注文一覧の取得に失敗", err)
 	}
 	count := 0
 	for _, row := range rows {

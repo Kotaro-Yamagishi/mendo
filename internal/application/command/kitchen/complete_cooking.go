@@ -2,7 +2,6 @@ package kitchen
 
 import (
 	"context"
-	"fmt"
 
 	"mendo/internal/domain"
 	"mendo/internal/domain/kitchen"
@@ -34,12 +33,12 @@ func (uc *CompleteCookingUsecase) Execute(ctx context.Context, orderID order.Ord
 	// 1. 厨房集約をロード
 	k, err := uc.kitchenReader.FindByID(ctx, uc.kitchenID)
 	if err != nil {
-		return fmt.Errorf("failed to find kitchen: %w", err)
+		return err
 	}
 
 	// 2. 調理完了コマンドを実行（業務ルールは集約の中）
 	if err := k.CompleteCookingTask(orderID); err != nil {
-		return fmt.Errorf("failed to complete cooking task: %w", err)
+		return err // domain の AppError をそのまま返す
 	}
 
 	// 3. Kitchen の保存と Outbox へのイベント保存を同一トランザクションで実行。
@@ -47,14 +46,14 @@ func (uc *CompleteCookingUsecase) Execute(ctx context.Context, orderID order.Ord
 	// これにより「Kitchen は保存されたがイベントが消えた」を防ぐ。
 	if err := uc.tx.Do(ctx, func(txCtx context.Context) error {
 		if err := uc.kitchenWriter.Save(txCtx, k); err != nil {
-			return fmt.Errorf("failed to save kitchen: %w", err)
+			return err
 		}
 		if err := uc.outbox.Store(txCtx, k.DomainEvents()); err != nil {
-			return fmt.Errorf("failed to store events in outbox: %w", err)
+			return err
 		}
 		return nil
 	}); err != nil {
-		return fmt.Errorf("transaction failed: %w", err)
+		return err // トランザクション内の AppError をそのまま返す
 	}
 
 	return nil

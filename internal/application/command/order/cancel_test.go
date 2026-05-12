@@ -2,15 +2,14 @@ package order_test
 
 import (
 	"context"
-	"errors"
 	"testing"
 
+	apporder "mendo/internal/application/command/order"
+	"mendo/internal/apperrors"
 	"mendo/internal/domain"
 	"mendo/internal/domain/menu"
 	"mendo/internal/domain/order"
 	"mendo/internal/testutil"
-
-	apporder "mendo/internal/application/command/order"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -46,9 +45,9 @@ func Test_CancelOrder_異常系(t *testing.T) {
 	t.Parallel()
 
 	tests := []struct {
-		name    string
-		setup   func() *testutil.StubEventStore
-		wantErr string
+		name     string
+		setup    func() *testutil.StubEventStore
+		wantCode string
 	}{
 		{
 			name: "業務ルール違反_pending",
@@ -60,14 +59,14 @@ func Test_CancelOrder_異常系(t *testing.T) {
 					},
 				}
 			},
-			wantErr: "",
+			wantCode: order.ErrCodeNotConfirmed,
 		},
 		{
 			name: "ロード失敗",
 			setup: func() *testutil.StubEventStore {
-				return &testutil.StubEventStore{LoadErr: errors.New("not found")}
+				return &testutil.StubEventStore{LoadErr: apperrors.Infrastructure("load failed", nil)}
 			},
-			wantErr: "load events",
+			wantCode: "INTERNAL_ERROR",
 		},
 	}
 	for _, tt := range tests {
@@ -80,9 +79,7 @@ func Test_CancelOrder_異常系(t *testing.T) {
 			err := uc.Execute(context.Background(), "order-1", "客都合")
 
 			require.Error(t, err)
-			if tt.wantErr != "" {
-				assert.Contains(t, err.Error(), tt.wantErr)
-			}
+			assert.True(t, apperrors.IsCode(err, tt.wantCode), "got: %v", err)
 		})
 	}
 }

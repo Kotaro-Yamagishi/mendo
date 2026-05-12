@@ -2,9 +2,9 @@ package repository
 
 import (
 	"context"
-	"fmt"
 	"sync"
 
+	"mendo/internal/apperrors"
 	"mendo/internal/domain/kitchen"
 )
 
@@ -22,7 +22,7 @@ func (r *InMemoryKitchenRepository) FindByID(_ context.Context, id kitchen.Kitch
 	defer r.mu.RUnlock()
 	k, ok := r.kitchens[string(id)]
 	if !ok {
-		return nil, fmt.Errorf("kitchen not found: %s", id)
+		return nil, apperrors.NotFound("kitchen", string(id))
 	}
 	return k, nil
 }

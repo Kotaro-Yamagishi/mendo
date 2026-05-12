@@ -2,8 +2,8 @@ package importstatus
 
 import (
 	"context"
-	"fmt"
 
+	"mendo/internal/apperrors"
 	importjob "mendo/internal/domain/import"
 )
 
@@ -33,7 +33,7 @@ type StatusResponse struct {
 func (h *ImportStatusHandler) Handle(ctx context.Context, jobID string) (*StatusResponse, error) {
 	job, err := h.jobReader.FindByID(ctx, importjob.JobID(jobID))
 	if err != nil {
-		return nil, fmt.Errorf("failed to find import job: %w", err)
+		return nil, apperrors.NotFound("import_job", jobID)
 	}
 	return &StatusResponse{
 		ID:            string(job.ID),

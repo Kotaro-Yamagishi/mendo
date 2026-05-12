@@ -2,9 +2,9 @@ package service
 
 import (
 	"context"
-	"fmt"
 	"time"
 
+	"mendo/internal/apperrors"
 	"mendo/internal/domain/kitchen"
 	"mendo/internal/domain/order"
 )
@@ -25,13 +25,13 @@ func (c *WaitTimeCalculator) EstimateWaitTime(ctx context.Context, kitchenID kit
 	// 未完了の注文数を取得（Order 集約のデータ）
 	pendingOrders, err := c.orderReader.CountPending(ctx)
 	if err != nil {
-		return 0, fmt.Errorf("failed to count pending orders: %w", err)
+		return 0, apperrors.Infrastructure("failed to count pending orders", err)
 	}
 
 	// 厨房の調理能力を取得（Kitchen 集約のデータ）
 	k, err := c.kitchenReader.FindByID(ctx, kitchenID)
 	if err != nil {
-		return 0, fmt.Errorf("failed to find kitchen: %w", err)
+		return 0, apperrors.Infrastructure("failed to find kitchen", err)
 	}
 	capacity := k.CookingCapacity()
 

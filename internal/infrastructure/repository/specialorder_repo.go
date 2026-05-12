@@ -2,9 +2,9 @@ package repository
 
 import (
 	"context"
-	"fmt"
 	"time"
 
+	"mendo/internal/apperrors"
 	"mendo/internal/domain/specialorder"
 	"mendo/internal/infrastructure/datasource"
 )
@@ -23,10 +23,10 @@ func NewSpecialOrderRepository(ds datasource.SpecialOrderDataSource) *SpecialOrd
 func (r *SpecialOrderRepository) FindByID(ctx context.Context, id specialorder.SpecialOrderID) (*specialorder.SpecialOrder, error) {
 	row, err := r.ds.FindSpecialOrderByID(ctx, id.String())
 	if err != nil {
-		return nil, fmt.Errorf("SpecialOrderRepository.FindByID: %w", err)
+		return nil, apperrors.Infrastructure("特別注文の取得に失敗", err)
 	}
 	if row == nil {
-		return nil, fmt.Errorf("special order not found: %s", id)
+		return nil, apperrors.NotFound("special_order", id.String())
 	}
 	return rowToSpecialOrder(row), nil
 }
@@ -44,7 +44,7 @@ func (r *SpecialOrderRepository) Save(ctx context.Context, so *specialorder.Spec
 		UpdatedAt:     now,
 	}
 	if err := r.ds.UpsertSpecialOrder(ctx, row); err != nil {
-		return fmt.Errorf("SpecialOrderRepository.Save: %w", err)
+		return apperrors.Infrastructure("特別注文の保存に失敗", err)
 	}
 	return nil
 }

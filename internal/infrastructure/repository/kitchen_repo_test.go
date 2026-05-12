@@ -67,7 +67,7 @@ func Test_KitchenRepo_FindByID_異常系(t *testing.T) {
 		{
 			name:            "DataSourceエラー",
 			ds:              &testutil.StubKitchenDataSource{FindErr: errors.New("db error")},
-			wantErrContains: "FindByID",
+			wantErrContains: "厨房の取得に失敗",
 		},
 		{
 			name: "タスク取得エラー",
@@ -75,7 +75,7 @@ func Test_KitchenRepo_FindByID_異常系(t *testing.T) {
 				KitchenRow:   &datasource.KitchenRow{KitchenID: "kitchen-1"},
 				FindTasksErr: errors.New("task db error"),
 			},
-			wantErrContains: "tasks",
+			wantErrContains: "調理タスクの取得に失敗",
 		},
 	}
 
@@ -144,5 +144,5 @@ func Test_KitchenRepo_Save_UpsertエラーStopsPropagation(t *testing.T) {
 	err := repo.Save(context.Background(), k)
 
 	require.Error(t, err)
-	assert.Contains(t, err.Error(), "UpsertKitchen")
+	assert.Contains(t, err.Error(), "厨房の保存に失敗")
 }

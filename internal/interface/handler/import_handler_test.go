@@ -82,7 +82,7 @@ func Test_ImportHandler_HandleImportMenus(t *testing.T) {
 			req := httptest.NewRequest(http.MethodPost, "/admin/import/menus", strings.NewReader(tt.body))
 			rec := httptest.NewRecorder()
 
-			h.HandleImportMenus(rec, req)
+			wrap(h.HandleImportMenus)(rec, req)
 
 			assert.Equal(t, tt.wantStatus, rec.Code)
 			require.Len(t, tt.jw.SavedJobs, tt.wantSavedJobs)
@@ -157,7 +157,7 @@ func Test_ImportHandler_HandleImportStatus(t *testing.T) {
 			req.SetPathValue("id", tt.pathID)
 			rec := httptest.NewRecorder()
 
-			h.HandleImportStatus(rec, req)
+			wrap(h.HandleImportStatus)(rec, req)
 
 			assert.Equal(t, tt.wantStatus, rec.Code)
 

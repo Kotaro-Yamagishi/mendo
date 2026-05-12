@@ -69,7 +69,7 @@ func Test_ListOrdersUsecase_Execute_エラー(t *testing.T) {
 	_, err := uc.Execute(context.Background())
 
 	require.Error(t, err)
-	assert.Contains(t, err.Error(), "list orders")
+	assert.Contains(t, err.Error(), "db error")
 }
 
 func Test_ListOrdersUsecase_FindByID_正常系(t *testing.T) {
@@ -96,5 +96,5 @@ func Test_ListOrdersUsecase_FindByID_見つからない(t *testing.T) {
 	_, err := uc.FindByID(context.Background(), "nonexistent")
 
 	require.Error(t, err)
-	assert.Contains(t, err.Error(), "find order")
+	assert.Contains(t, err.Error(), "not found")
 }

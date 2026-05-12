@@ -18,19 +18,18 @@ func NewKitchenHandler(completeCookingUC *kitchencommand.CompleteCookingUsecase)
 
 // HandleCompleteCooking は POST /kitchen/complete のハンドラ。
 // 厨房スタッフが調理完了ボタンを押した時に呼ばれる。
-func (h *KitchenHandler) HandleCompleteCooking(w http.ResponseWriter, r *http.Request) {
+func (h *KitchenHandler) HandleCompleteCooking(w http.ResponseWriter, r *http.Request) error {
 	var body struct {
 		OrderID string `json:"order_id"`
 	}
 	if err := readJSON(r, &body); err != nil {
-		writeError(w, http.StatusBadRequest, "invalid request body")
-		return
+		return err
 	}
 
 	if err := h.completeCookingUC.Execute(r.Context(), order.OrderID(body.OrderID)); err != nil {
-		writeError(w, http.StatusUnprocessableEntity, err.Error())
-		return
+		return err
 	}
 
-	writeSuccess(w, http.StatusOK, map[string]string{"status": "cooking_completed"})
+	WriteSuccess(w, http.StatusOK, map[string]string{"status": "cooking_completed"})
+	return nil
 }

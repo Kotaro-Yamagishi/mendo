@@ -61,7 +61,7 @@ func Test_DLQRepo_Store_InsertエラーがPropagateされる(t *testing.T) {
 	err := repo.Store(context.Background(), letter)
 
 	require.Error(t, err)
-	assert.Contains(t, err.Error(), "InsertDeadLetterRow")
+	assert.Contains(t, err.Error(), "DLQへの保存に失敗")
 }
 
 // =============================================================================
@@ -127,7 +127,7 @@ func Test_DLQRepo_List_DataSourceエラー(t *testing.T) {
 	_, err := repo.List(context.Background())
 
 	require.Error(t, err)
-	assert.Contains(t, err.Error(), "List")
+	assert.Contains(t, err.Error(), "DLQ一覧の取得に失敗")
 }
 
 // =============================================================================
@@ -196,5 +196,5 @@ func Test_DLQRepo_Remove_エラー(t *testing.T) {
 	err := repo.Remove(context.Background(), "dlq-1")
 
 	require.Error(t, err)
-	assert.Contains(t, err.Error(), "Remove")
+	assert.Contains(t, err.Error(), "DLQの削除に失敗")
 }

@@ -1,7 +1,6 @@
 package handler
 
 import (
-	"fmt"
 	"net/http"
 
 	dlqcommand "mendo/internal/application/command/dlq"
@@ -17,11 +16,10 @@ func NewDLQHandler(lh *dlqquery.ListDLQHandler, rh *dlqcommand.RetryDLQUsecase) 
 	return &DLQHandler{listHandler: lh, retryHandler: rh}
 }
 
-func (h *DLQHandler) HandleList(w http.ResponseWriter, r *http.Request) {
+func (h *DLQHandler) HandleList(w http.ResponseWriter, r *http.Request) error {
 	letters, err := h.listHandler.Handle(r.Context())
 	if err != nil {
-		writeError(w, http.StatusInternalServerError, fmt.Errorf("failed to list DLQ: %w", err).Error())
-		return
+		return err
 	}
 
 	type dlqResponse struct {
@@ -43,15 +41,16 @@ func (h *DLQHandler) HandleList(w http.ResponseWriter, r *http.Request) {
 		})
 	}
 
-	writeSuccess(w, http.StatusOK, result)
+	WriteSuccess(w, http.StatusOK, result)
+	return nil
 }
 
-func (h *DLQHandler) HandleRetry(w http.ResponseWriter, r *http.Request) {
+func (h *DLQHandler) HandleRetry(w http.ResponseWriter, r *http.Request) error {
 	id := r.PathValue("id")
 	if err := h.retryHandler.Execute(r.Context(), id); err != nil {
-		writeError(w, http.StatusUnprocessableEntity, fmt.Errorf("failed to retry: %w", err).Error())
-		return
+		return err
 	}
 
-	writeSuccess(w, http.StatusOK, map[string]string{"status": "retried"})
+	WriteSuccess(w, http.StatusOK, map[string]string{"status": "retried"})
+	return nil
 }

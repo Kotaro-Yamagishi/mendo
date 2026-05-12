@@ -2,7 +2,6 @@ package order
 
 import (
 	"context"
-	"fmt"
 	"time"
 
 	"mendo/internal/domain/kitchen"
@@ -23,7 +22,7 @@ func NewEstimateWaitTimeUsecase(calc *service.WaitTimeCalculator, id kitchen.Kit
 func (uc *EstimateWaitTimeUsecase) Execute(ctx context.Context) (time.Duration, error) {
 	d, err := uc.calculator.EstimateWaitTime(ctx, uc.kitchenID)
 	if err != nil {
-		return 0, fmt.Errorf("failed to estimate wait time: %w", err)
+		return 0, err
 	}
 	return d, nil
 }

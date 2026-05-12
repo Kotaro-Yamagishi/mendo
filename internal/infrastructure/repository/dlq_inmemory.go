@@ -2,9 +2,9 @@ package repository
 
 import (
 	"context"
-	"fmt"
 	"sync"
 
+	"mendo/internal/apperrors"
 	"mendo/internal/domain"
 )
 
@@ -46,7 +46,7 @@ func (d *InMemoryDLQ) FindByID(_ context.Context, id string) (*domain.DeadLetter
 	defer d.mu.RUnlock()
 	l, ok := d.letters[id]
 	if !ok {
-		return nil, fmt.Errorf("dead letter not found: %s", id)
+		return nil, apperrors.NotFound("dead_letter", id)
 	}
 	return &l, nil
 }

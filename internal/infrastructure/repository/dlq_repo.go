@@ -3,8 +3,8 @@ package repository
 import (
 	"context"
 	"encoding/json"
-	"fmt"
 
+	"mendo/internal/apperrors"
 	"mendo/internal/domain"
 	"mendo/internal/infrastructure/datasource"
 )
@@ -23,7 +23,7 @@ func NewDLQRepository(ds datasource.DLQDataSource) *DLQRepository {
 func (r *DLQRepository) Store(ctx context.Context, letter *domain.DeadLetter) error {
 	payload, err := json.Marshal(letter.Event)
 	if err != nil {
-		return fmt.Errorf("DLQRepository.Store marshal: %w", err)
+		return apperrors.Infrastructure("DLQイベントの変換に失敗", err)
 	}
 	row := &datasource.DeadLetterRow{
 		ID:          letter.ID,
@@ -35,7 +35,7 @@ func (r *DLQRepository) Store(ctx context.Context, letter *domain.DeadLetter) er
 		LastFailAt:  letter.LastFailAt,
 	}
 	if err := r.ds.InsertDeadLetterRow(ctx, row); err != nil {
-		return fmt.Errorf("DLQRepository.Store InsertDeadLetterRow: %w", err)
+		return apperrors.Infrastructure("DLQへの保存に失敗", err)
 	}
 	return nil
 }
@@ -44,7 +44,7 @@ func (r *DLQRepository) Store(ctx context.Context, letter *domain.DeadLetter) er
 func (r *DLQRepository) List(ctx context.Context) ([]domain.DeadLetter, error) {
 	rows, err := r.ds.FindAllDeadLetterRows(ctx)
 	if err != nil {
-		return nil, fmt.Errorf("DLQRepository.List: %w", err)
+		return nil, apperrors.Infrastructure("DLQ一覧の取得に失敗", err)
 	}
 	letters := make([]domain.DeadLetter, 0, len(rows))
 	for _, row := range rows {
@@ -60,7 +60,7 @@ func (r *DLQRepository) List(ctx context.Context) ([]domain.DeadLetter, error) {
 // Remove は指定した ID の DeadLetter を削除する。
 func (r *DLQRepository) Remove(ctx context.Context, id string) error {
 	if err := r.ds.DeleteDeadLetterRow(ctx, id); err != nil {
-		return fmt.Errorf("DLQRepository.Remove: %w", err)
+		return apperrors.Infrastructure("DLQの削除に失敗", err)
 	}
 	return nil
 }
@@ -69,10 +69,10 @@ func (r *DLQRepository) Remove(ctx context.Context, id string) error {
 func (r *DLQRepository) FindByID(ctx context.Context, id string) (*domain.DeadLetter, error) {
 	row, err := r.ds.FindDeadLetterRowByID(ctx, id)
 	if err != nil {
-		return nil, fmt.Errorf("DLQRepository.FindByID: %w", err)
+		return nil, apperrors.Infrastructure("DLQの取得に失敗", err)
 	}
 	if row == nil {
-		return nil, fmt.Errorf("dead letter not found: %s", id)
+		return nil, apperrors.NotFound("dead_letter", id)
 	}
 	return rowToDeadLetter(row)
 }
@@ -81,7 +81,7 @@ func rowToDeadLetter(row *datasource.DeadLetterRow) (*domain.DeadLetter, error) 
 	// Payload から DomainEvent を復元する（学習用のため DomainEvent ラッパーを使う）
 	var base domain.DomainEvent
 	if err := json.Unmarshal([]byte(row.Payload), &base); err != nil {
-		return nil, fmt.Errorf("rowToDeadLetter unmarshal: %w", err)
+		return nil, apperrors.Infrastructure("DLQイベントの変換に失敗", err)
 	}
 	event := &unknownEvent{DomainEvent: base}
 	return &domain.DeadLetter{

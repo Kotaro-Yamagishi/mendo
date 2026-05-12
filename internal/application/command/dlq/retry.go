@@ -2,8 +2,8 @@ package dlq
 
 import (
 	"context"
-	"fmt"
 
+	"mendo/internal/apperrors"
 	"mendo/internal/domain"
 )
 
@@ -19,13 +19,13 @@ func NewRetryDLQUsecase(dlq domain.DeadLetterQueue, pub domain.EventPublisher) *
 func (uc *RetryDLQUsecase) Execute(ctx context.Context, id string) error {
 	letter, err := uc.dlq.FindByID(ctx, id)
 	if err != nil {
-		return fmt.Errorf("failed to find dead letter: %w", err)
+		return apperrors.NotFound("dead_letter", id)
 	}
 	if err := uc.publisher.Publish(ctx, letter.Event); err != nil {
-		return fmt.Errorf("failed to retry event: %w", err)
+		return err
 	}
 	if err := uc.dlq.Remove(ctx, id); err != nil {
-		return fmt.Errorf("failed to remove dead letter: %w", err)
+		return err
 	}
 	return nil
 }

@@ -74,7 +74,7 @@ func Test_KitchenHandler_HandleCompleteCooking(t *testing.T) {
 			req := httptest.NewRequest(http.MethodPost, "/kitchen/complete", strings.NewReader(tt.body))
 			rec := httptest.NewRecorder()
 
-			h.HandleCompleteCooking(rec, req)
+			wrap(h.HandleCompleteCooking)(rec, req)
 
 			assert.Equal(t, tt.wantStatus, rec.Code)
 
