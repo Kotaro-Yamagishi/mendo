@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log/slog"
 	"testing"
 	"time"
 
@@ -43,7 +44,7 @@ func TestWorker_AllSuccess(t *testing.T) {
 	menuReader := &testutil.StubMenuReader{Menus: nil}
 	menuWriter := &testutil.SpyMenuWriter{}
 
-	w := importworker.NewWorker(jobStore, menuReader, menuWriter)
+	w := importworker.NewWorker(jobStore, menuReader, menuWriter, slog.Default())
 	w.Start(ctx)
 
 	rows := []importjob.ImportRow{
@@ -79,7 +80,7 @@ func TestWorker_DuplicateMenuName(t *testing.T) {
 	menuReader := &testutil.StubMenuReader{Menus: []*menudomain.Menu{existingMenu}}
 	menuWriter := &testutil.SpyMenuWriter{}
 
-	w := importworker.NewWorker(jobStore, menuReader, menuWriter)
+	w := importworker.NewWorker(jobStore, menuReader, menuWriter, slog.Default())
 	w.Start(ctx)
 
 	rows := []importjob.ImportRow{
@@ -115,7 +116,7 @@ func TestWorker_ChunkSplit(t *testing.T) {
 	menuReader := &testutil.StubMenuReader{Menus: nil}
 	menuWriter := &testutil.SpyMenuWriter{}
 
-	w := importworker.NewWorker(jobStore, menuReader, menuWriter)
+	w := importworker.NewWorker(jobStore, menuReader, menuWriter, slog.Default())
 	w.Start(ctx)
 
 	rows := make([]importjob.ImportRow, 25)
@@ -143,7 +144,7 @@ func TestWorker_EmptyRows(t *testing.T) {
 	menuReader := &testutil.StubMenuReader{Menus: nil}
 	menuWriter := &testutil.SpyMenuWriter{}
 
-	w := importworker.NewWorker(jobStore, menuReader, menuWriter)
+	w := importworker.NewWorker(jobStore, menuReader, menuWriter, slog.Default())
 	w.Start(ctx)
 
 	job := importjob.NewJob("job-4", []importjob.ImportRow{})
@@ -167,7 +168,7 @@ func TestWorker_WriterFail(t *testing.T) {
 	menuReader := &testutil.StubMenuReader{Menus: nil}
 	menuWriter := &testutil.SpyMenuWriter{SaveErr: errors.New("db error")}
 
-	w := importworker.NewWorker(jobStore, menuReader, menuWriter)
+	w := importworker.NewWorker(jobStore, menuReader, menuWriter, slog.Default())
 	w.Start(ctx)
 
 	rows := []importjob.ImportRow{

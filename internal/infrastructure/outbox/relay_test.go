@@ -3,6 +3,7 @@ package outbox_test
 import (
 	"context"
 	"errors"
+	"log/slog"
 	"sync"
 	"testing"
 	"time"
@@ -95,7 +96,7 @@ func (e stubDomainEvent) GetCorrelationID() string { return "" }
 // interval=10ms で起動し、25ms 待つことで確実に1回は ticker が発火する。
 func runRelay(t *testing.T, ob domain.Outbox, pub domain.EventPublisher) {
 	t.Helper()
-	svc := outbox.NewRelayService(ob, pub, 10*time.Millisecond)
+	svc := outbox.NewRelayService(ob, pub, 10*time.Millisecond, slog.Default())
 	ctx, cancel := context.WithCancel(context.Background())
 	svc.Start(ctx)
 	time.Sleep(25 * time.Millisecond) // 少なくとも1回の ticker 発火を確認

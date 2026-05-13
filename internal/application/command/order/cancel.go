@@ -2,6 +2,7 @@ package order
 
 import (
 	"context"
+	"log/slog"
 
 	"mendo/internal/apperrors"
 	"mendo/internal/domain"
@@ -49,5 +50,6 @@ func (uc *CancelOrderUsecase) Execute(ctx context.Context, orderID, reason strin
 	// 6. イベントをクリア
 	o.ClearEvents()
 
+	slog.InfoContext(ctx, "order canceled", slog.String("order_id", orderID), slog.String("reason", reason))
 	return nil
 }

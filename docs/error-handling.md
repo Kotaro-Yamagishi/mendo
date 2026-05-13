@@ -13,7 +13,7 @@ type AppError struct {
     Message  string         // 人間可読メッセージ（ユーザーに表示）
     Cause    error          // 元エラー（ログ用。ユーザーには見せない）
     Details  map[string]any // 構造化コンテキスト（ログ用）
-    TraceID  string         // 分散トレーシング用
+    CorrelationID string         // 分散トレーシング用
 }
 ```
 
@@ -110,7 +110,7 @@ Category.IsClientError() で判定
   ├→ クライアントエラー: メッセージをそのまま返す（WARN ログ）
   └→ サーバーエラー: "internal server error" に隠蔽（ERROR ログ）
   ↓
-TraceID を付与してレスポンス
+CorrelationID を付与してレスポンス
 ```
 
 ## API レスポンス形式

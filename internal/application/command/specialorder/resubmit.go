@@ -2,6 +2,7 @@ package specialorder
 
 import (
 	"context"
+	"log/slog"
 
 	"mendo/internal/apperrors"
 	"mendo/internal/domain"
@@ -32,5 +33,7 @@ func (uc *ResubmitSpecialOrderUsecase) Execute(ctx context.Context, id, newMenuN
 	if err := uc.publisher.Publish(ctx, so.DomainEvents()...); err != nil {
 		return err
 	}
+
+	slog.InfoContext(ctx, "special order resubmitted", slog.String("special_order_id", id), slog.String("new_menu_name", newMenuName))
 	return nil
 }

@@ -88,7 +88,7 @@ func setupServer() *httptest.Server {
 
 	// --- インフラ層: InMemory EventBus（イベント配信はインメモリ）---
 	dlq := repository.NewInMemoryDLQ()
-	bus := eventbus.NewWatermillEventBus(dlq, 3)
+	bus := eventbus.NewWatermillEventBus(dlq, 3, slog.Default())
 
 	// --- インフラ層: InMemory OrderStateStore（Projection）---
 	orderStateStore := repository.NewInMemoryOrderStateStore()

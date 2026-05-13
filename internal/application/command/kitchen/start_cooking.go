@@ -2,7 +2,7 @@ package kitchen
 
 import (
 	"context"
-	"fmt"
+	"log/slog"
 
 	"mendo/internal/domain"
 	"mendo/internal/domain/contract"
@@ -48,7 +48,9 @@ func (uc *StartCookingUsecase) HandleOrderConfirmedPublic(ctx context.Context, e
 		if pubErr := uc.publisher.Publish(ctx, k.DomainEvents()...); pubErr != nil {
 			return pubErr
 		}
-		fmt.Printf("[Saga] CookingTask 失敗 → CookingRejected を発行 (orderID: %s)\n", event.OrderID)
+		slog.InfoContext(ctx, "saga: cooking task rejected, compensation event published",
+			slog.String("order_id", event.OrderID),
+		)
 		return nil // subscriber 全体のエラーにはしない
 	}
 
@@ -56,5 +58,7 @@ func (uc *StartCookingUsecase) HandleOrderConfirmedPublic(ctx context.Context, e
 	if err := uc.kitchenWriter.Save(ctx, k); err != nil {
 		return err
 	}
+
+	slog.InfoContext(ctx, "cooking started", slog.String("order_id", event.OrderID), slog.String("kitchen_id", string(uc.kitchenID)))
 	return nil
 }

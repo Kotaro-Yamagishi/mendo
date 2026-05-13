@@ -11,8 +11,7 @@ import (
 )
 
 // RegisterRoutes は HTTP ルーティングを設定する。
-func RegisterRoutes(mux *http.ServeMux, app *di.App, staffHandler *staff.Handler, closingHandler *closing.Handler) { //nolint:funlen // ルーティング登録は一覧性を優先して1関数にまとめる
-	logger := slog.Default()
+func RegisterRoutes(mux *http.ServeMux, app *di.App, staffHandler *staff.Handler, closingHandler *closing.Handler, logger *slog.Logger) { //nolint:funlen // ルーティング登録は一覧性を優先して1関数にまとめる
 	wrap := func(h handler.AppHandlerFunc) http.HandlerFunc {
 		return handler.ErrorMiddleware(h, logger)
 	}

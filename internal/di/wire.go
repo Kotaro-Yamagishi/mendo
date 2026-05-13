@@ -4,6 +4,8 @@
 package di
 
 import (
+	"log/slog"
+
 	"github.com/google/wire"
 
 	kitchencommand "mendo/internal/application/command/kitchen"
@@ -30,9 +32,10 @@ type App struct {
 	OrderStateStore     *repository.InMemoryOrderStateStore
 	OutboxRelay         *infraoutbox.RelayService
 	ImportWorker        *importworker.Worker
+	Logger              *slog.Logger
 }
 
-func InitializeApp(kitchenID kitchen.KitchenID, eventBus domain.EventPublisher, dlqStore *repository.InMemoryDLQ) (*App, error) {
+func InitializeApp(kitchenID kitchen.KitchenID, eventBus domain.EventPublisher, dlqStore *repository.InMemoryDLQ, logger *slog.Logger) (*App, error) {
 	wire.Build(
 		// インフラ層: リポジトリ実装
 		providerSet,

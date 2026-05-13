@@ -3,6 +3,7 @@ package eventbus_test
 import (
 	"context"
 	"errors"
+	"log/slog"
 	"testing"
 
 	"mendo/internal/domain"
@@ -29,7 +30,7 @@ func newStubEvent(eventType, aggregateID string) stubEvent {
 // TestSubscribePublish_HandlerCalled はハンドラが呼ばれることを確認する。
 func TestSubscribePublish_HandlerCalled(t *testing.T) {
 	dlq := &testutil.StubDeadLetterQueue{}
-	bus := eventbus.NewWatermillEventBus(dlq, 3)
+	bus := eventbus.NewWatermillEventBus(dlq, 3, slog.Default())
 
 	called := 0
 	bus.Subscribe(order.EventTypeOrderCreated, func(_ context.Context, _ domain.Event) error {
@@ -51,7 +52,7 @@ func TestSubscribePublish_HandlerCalled(t *testing.T) {
 func TestPublish_HandlerFailure_Retried(t *testing.T) {
 	dlq := &testutil.StubDeadLetterQueue{}
 	maxRetries := 3
-	bus := eventbus.NewWatermillEventBus(dlq, maxRetries)
+	bus := eventbus.NewWatermillEventBus(dlq, maxRetries, slog.Default())
 
 	attempts := 0
 	bus.Subscribe(order.EventTypeOrderCreated, func(_ context.Context, _ domain.Event) error {
@@ -73,7 +74,7 @@ func TestPublish_HandlerFailure_Retried(t *testing.T) {
 func TestPublish_AllRetriesFail_StoredInDLQ(t *testing.T) {
 	dlq := &testutil.StubDeadLetterQueue{}
 	maxRetries := 3
-	bus := eventbus.NewWatermillEventBus(dlq, maxRetries)
+	bus := eventbus.NewWatermillEventBus(dlq, maxRetries, slog.Default())
 
 	bus.Subscribe(order.EventTypeOrderConfirmed, func(_ context.Context, _ domain.Event) error {
 		return errors.New("permanent failure")
@@ -93,7 +94,7 @@ func TestPublish_AllRetriesFail_StoredInDLQ(t *testing.T) {
 func TestPublish_AllRetriesFail_DeadLetterContent(t *testing.T) {
 	dlq := &testutil.StubDeadLetterQueue{}
 	maxRetries := 2
-	bus := eventbus.NewWatermillEventBus(dlq, maxRetries)
+	bus := eventbus.NewWatermillEventBus(dlq, maxRetries, slog.Default())
 
 	handlerErr := errors.New("handler exploded")
 	bus.Subscribe("kitchen.started", func(_ context.Context, _ domain.Event) error {

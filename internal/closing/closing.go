@@ -1,7 +1,8 @@
 package closing
 
 import (
-	"fmt"
+	"context"
+	"log/slog"
 )
 
 // CloseShop は閉店処理を実行するトランザクションスクリプト。
@@ -13,12 +14,12 @@ import (
 //     db.Exec("UPDATE orders SET status = 'canceled' WHERE status IN ('pending','confirmed')")
 //
 // 第10章: 補完領域 → トランザクションスクリプト → レイヤードアーキテクチャ
-func CloseShop(orderIDs []string) (int, error) {
+func CloseShop(ctx context.Context, orderIDs []string) (int, error) {
 	canceledCount := 0
 	for _, orderID := range orderIDs {
-		fmt.Printf("[CloseShop] 注文 %s をキャンセル\n", orderID)
+		slog.InfoContext(ctx, "close shop: order canceled", slog.String("order_id", orderID))
 		canceledCount++
 	}
-	fmt.Printf("[CloseShop] 閉店処理完了。%d 件の注文をキャンセル\n", canceledCount)
+	slog.InfoContext(ctx, "close shop completed", slog.Int("canceled_count", canceledCount))
 	return canceledCount, nil
 }

@@ -2,6 +2,7 @@ package menu
 
 import (
 	"context"
+	"log/slog"
 
 	"github.com/google/uuid"
 
@@ -34,5 +35,6 @@ func (uc *ImportMenusUsecase) Execute(ctx context.Context, rows []importjob.Impo
 	// 3. ワーカーに投げる（非同期。即座に返る）
 	uc.jobEnqueuer.Enqueue(job)
 
+	slog.InfoContext(ctx, "import job enqueued", slog.String("job_id", string(job.ID)), slog.Int("total_rows", job.TotalRows))
 	return string(jobID), nil
 }

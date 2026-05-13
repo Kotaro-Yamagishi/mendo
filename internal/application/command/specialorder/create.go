@@ -2,6 +2,7 @@ package specialorder
 
 import (
 	"context"
+	"log/slog"
 
 	"mendo/internal/domain"
 	"mendo/internal/domain/specialorder"
@@ -26,5 +27,7 @@ func (uc *CreateSpecialOrderUsecase) Execute(ctx context.Context, orderID, menuN
 	if err := uc.publisher.Publish(ctx, so.DomainEvents()...); err != nil {
 		return "", err
 	}
+
+	slog.InfoContext(ctx, "special order created", slog.String("special_order_id", string(id)), slog.String("order_id", orderID), slog.String("menu_name", menuName))
 	return string(id), nil
 }

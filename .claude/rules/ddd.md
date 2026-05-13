@@ -264,13 +264,41 @@ if err != nil {
 - panic recovery + エラー変換 + ログ出力を一括処理
 - `Category.IsClientError()` でクライアントエラーとサーバーエラーを自動判定
 - サーバーエラー（500系）はメッセージを隠蔽。ログにのみ詳細出力
-- TraceID を付与してレスポンスに含める
+- CorrelationID を付与してレスポンスに含める
 
 ### エラーは1回だけ handle
 - ログ OR 復旧 OR 表示のどれか1つ
 - 「ラップして返す」はハンドリングではない
 - ErrorMiddleware が最終ハンドラとして1回だけ処理する
 - application 層や repository 層でログを出さない
+
+## ログ
+
+### 設計方針
+- `*slog.Logger` をそのまま DI する。独自 Logger interface は作らない
+- domain 層は `slog` を import しない。ログは技術的関心事であり業務知識ではない
+- `fmt.Printf` / `log.Printf` 禁止。全て slog を使う
+
+### 各層のログ
+
+| 層 | ログ | 方法 |
+|---|---|---|
+| domain | **出さない** | slog を import しない |
+| application | 状態遷移の成功ログ（INFO） | `slog.InfoContext(ctx, ...)` を return 直前に |
+| infrastructure | 技術的イベント（INFO/WARN/ERROR） | `*slog.Logger` を DI で受け取る |
+| interface/middleware | リクエスト/エラー（自動） | CorrelationMiddleware + ErrorMiddleware |
+| handler | **出さない** | `return err` するだけ |
+| subscribers | イベント購読トレース（INFO） | `slog.InfoContext(ctx, ...)` |
+| Projection | 開発用トレース（DEBUG） | `slog.Debug(...)` |
+
+### CorrelationID
+- HTTP 境界で生成し `context.WithValue` で全レイヤーに伝搬
+- `correlationHandler`（カスタム slog.Handler）が全ログに `correlation_id` を自動付与
+- DomainEvent の CorrelationID と一致させる
+
+### DI
+- `logging.NewLogger()` で生成 → `slog.SetDefault()` → Wire の依存グラフに載せる
+- `slog.Default()` のハードコードは避ける
 
 ## ビルド・品質チェック
 

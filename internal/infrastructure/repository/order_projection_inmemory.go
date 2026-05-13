@@ -2,7 +2,7 @@ package repository
 
 import (
 	"context"
-	"fmt"
+	"log/slog"
 	"sync"
 
 	"mendo/internal/apperrors"
@@ -47,24 +47,37 @@ func (s *InMemoryOrderStateStore) HandleEvent(_ context.Context, event domain.Ev
 			Status:    "pending",
 			ItemCount: 0,
 		}
-		fmt.Printf("[Projection] INSERT: order_id=%s, seat_no=%d, status=pending\n", e.GetAggregateID(), e.SeatNo)
+		slog.Debug("projection insert",
+			slog.String("order_id", e.GetAggregateID()),
+			slog.Int("seat_no", e.SeatNo),
+			slog.String("status", "pending"),
+		)
 
 	case order.ItemAdded:
 		if row, ok := s.store[e.GetAggregateID()]; ok {
 			row.ItemCount++
-			fmt.Printf("[Projection] UPDATE: order_id=%s, item_count=%d\n", e.GetAggregateID(), row.ItemCount)
+			slog.Debug("projection update",
+				slog.String("order_id", e.GetAggregateID()),
+				slog.Int("item_count", row.ItemCount),
+			)
 		}
 
 	case order.OrderConfirmed:
 		if row, ok := s.store[e.GetAggregateID()]; ok {
 			row.Status = "confirmed"
-			fmt.Printf("[Projection] UPDATE: order_id=%s, status=confirmed\n", e.GetAggregateID())
+			slog.Debug("projection update",
+				slog.String("order_id", e.GetAggregateID()),
+				slog.String("status", "confirmed"),
+			)
 		}
 
 	case order.OrderCancelled:
 		if row, ok := s.store[e.GetAggregateID()]; ok {
 			row.Status = "canceled"
-			fmt.Printf("[Projection] UPDATE: order_id=%s, status=canceled\n", e.GetAggregateID())
+			slog.Debug("projection update",
+				slog.String("order_id", e.GetAggregateID()),
+				slog.String("status", "canceled"),
+			)
 		}
 	}
 	return nil

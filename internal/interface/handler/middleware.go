@@ -6,9 +6,8 @@ import (
 	"log/slog"
 	"net/http"
 
-	"github.com/google/uuid"
-
 	"mendo/internal/apperrors"
+	"mendo/internal/logging"
 )
 
 // AppHandlerFunc は error を返せる handler。
@@ -20,7 +19,7 @@ func ErrorMiddleware(h AppHandlerFunc, logger *slog.Logger) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		defer func() {
 			if rec := recover(); rec != nil {
-				logger.Error("panic recovered",
+				logger.ErrorContext(r.Context(), "panic recovered",
 					"panic", rec,
 					"method", r.Method,
 					"path", r.URL.Path,
@@ -34,73 +33,70 @@ func ErrorMiddleware(h AppHandlerFunc, logger *slog.Logger) http.HandlerFunc {
 			return
 		}
 
-		traceID := r.Header.Get("X-Trace-ID")
-		if traceID == "" {
-			traceID = uuid.New().String()
+		correlationID := logging.GetCorrelationID(r.Context())
+		if correlationID == "" {
+			correlationID = logging.NewCorrelationID()
 		}
 
 		var appErr *apperrors.AppError
 		if !errors.As(err, &appErr) {
 			// AppError でない = 想定外
-			logger.Error("unexpected error",
+			logger.ErrorContext(r.Context(), "unexpected error",
 				"error", err,
-				"trace_id", traceID,
 				"method", r.Method,
 				"path", r.URL.Path,
 			)
-			writeErrorJSON(w, http.StatusInternalServerError, "INTERNAL_ERROR", "internal server error", traceID)
+			writeErrorJSON(w, http.StatusInternalServerError, "INTERNAL_ERROR", "internal server error", correlationID)
 			return
 		}
 
-		appErr.TraceID = traceID
+		appErr.CorrelationID = correlationID
 		status := appErr.Category.HTTPStatus()
 
 		if !appErr.Category.IsClientError() {
 			// サーバーエラー: メッセージを隠す
-			logger.Error("system error",
+			logger.ErrorContext(r.Context(), "system error",
 				"code", appErr.Code,
 				"message", appErr.Message,
 				"cause", appErr.Cause,
 				"details", appErr.Details,
-				"trace_id", traceID,
 				"method", r.Method,
 				"path", r.URL.Path,
 			)
-			writeErrorJSON(w, status, appErr.Code, "internal server error", traceID)
+			writeErrorJSON(w, status, appErr.Code, "internal server error", correlationID)
 			return
 		}
 
 		// クライアントエラー: メッセージを返す
-		logger.Warn("client error",
+		logger.WarnContext(r.Context(), "client error",
 			"code", appErr.Code,
 			"message", appErr.Message,
 			"details", appErr.Details,
-			"trace_id", traceID,
 		)
-		writeErrorJSONWithDetails(w, status, appErr, traceID)
+		writeErrorJSONWithDetails(w, status, appErr, correlationID)
 	}
 }
 
-func writeErrorJSON(w http.ResponseWriter, status int, code, message, traceID string) {
+func writeErrorJSON(w http.ResponseWriter, status int, code, message, correlationID string) {
 	errBody := map[string]any{
 		"code":    code,
 		"message": message,
 	}
-	if traceID != "" {
-		errBody["trace_id"] = traceID
+	if correlationID != "" {
+		errBody["correlation_id"] = correlationID
 	}
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(status)
 	json.NewEncoder(w).Encode(map[string]any{"error": errBody}) //nolint:errcheck
 }
 
-func writeErrorJSONWithDetails(w http.ResponseWriter, status int, appErr *apperrors.AppError, traceID string) {
+func writeErrorJSONWithDetails(w http.ResponseWriter, status int, appErr *apperrors.AppError, correlationID string) {
 	errBody := map[string]any{
 		"code":    appErr.Code,
 		"message": appErr.Message,
 	}
-	if traceID != "" {
-		errBody["trace_id"] = traceID
+	if correlationID != "" {
+		errBody["correlation_id"] = correlationID
 	}
 	// Validation の fields を追加
 	if fields, ok := appErr.Details["fields"]; ok {

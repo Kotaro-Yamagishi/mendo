@@ -2,7 +2,7 @@ package outbox
 
 import (
 	"context"
-	"fmt"
+	"log/slog"
 	"time"
 
 	"mendo/internal/apperrors"
@@ -15,10 +15,11 @@ type RelayService struct {
 	outbox    domain.Outbox
 	publisher domain.EventPublisher
 	interval  time.Duration
+	logger    *slog.Logger
 }
 
-func NewRelayService(ob domain.Outbox, pub domain.EventPublisher, interval time.Duration) *RelayService {
-	return &RelayService{outbox: ob, publisher: pub, interval: interval}
+func NewRelayService(ob domain.Outbox, pub domain.EventPublisher, interval time.Duration, logger *slog.Logger) *RelayService {
+	return &RelayService{outbox: ob, publisher: pub, interval: interval, logger: logger}
 }
 
 // Start はリレーサービスを開始する。ゴルーチンで実行。
@@ -32,12 +33,12 @@ func (r *RelayService) Start(ctx context.Context) {
 				return
 			case <-ticker.C:
 				if err := r.relay(ctx); err != nil {
-					fmt.Printf("[OutboxRelay] error: %v\n", err)
+					r.logger.Error("outbox relay error", "error", err)
 				}
 			}
 		}
 	}()
-	fmt.Printf("[OutboxRelay] started (interval: %s)\n", r.interval)
+	r.logger.Info("outbox relay started", slog.String("interval", r.interval.String()))
 }
 
 func (r *RelayService) relay(ctx context.Context) error {
@@ -61,6 +62,6 @@ func (r *RelayService) relay(ctx context.Context) error {
 		return apperrors.Infrastructure("Outbox 配信済みマークに失敗", err)
 	}
 
-	fmt.Printf("[OutboxRelay] delivered %d events\n", len(events))
+	r.logger.Info("outbox relay delivered", slog.Int("count", len(events)))
 	return nil
 }

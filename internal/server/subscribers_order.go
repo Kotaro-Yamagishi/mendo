@@ -3,6 +3,7 @@ package server
 import (
 	"context"
 	"fmt"
+	"log/slog"
 
 	"mendo/internal/apperrors"
 	"mendo/internal/di"
@@ -27,7 +28,12 @@ func registerOrderSubscribers(bus *eventbus.WatermillEventBus, app *di.App) {
 			return apperrors.Infrastructure("予期しないイベント型", fmt.Errorf("got %T", event))
 		}
 		publicEvent := order.ToPublicCreated(created)
-		fmt.Printf("[EventBus] OrderCreated → 公開イベントに変換 (orderID: %s, seatNo: %d)\n", publicEvent.OrderID, publicEvent.SeatNo)
+		slog.InfoContext(ctx, "event published",
+			slog.String("event_type", order.EventTypeOrderCreated),
+			slog.String("action", "convert to public event"),
+			slog.String("order_id", publicEvent.OrderID),
+			slog.Int("seat_no", publicEvent.SeatNo),
+		)
 		return nil
 	})
 
@@ -46,7 +52,11 @@ func registerOrderSubscribers(bus *eventbus.WatermillEventBus, app *di.App) {
 
 		// 2. 他の BC へは公開イベントに変換してから渡す
 		publicEvent := order.ToPublicConfirmed(confirmed)
-		fmt.Printf("[EventBus] OrderConfirmed → 公開イベントに変換 → Kitchen BC (orderID: %s)\n", publicEvent.OrderID)
+		slog.InfoContext(ctx, "event published",
+			slog.String("event_type", order.EventTypeOrderConfirmed),
+			slog.String("action", "convert to public event"),
+			slog.String("order_id", publicEvent.OrderID),
+		)
 		return app.StartCookingUC.HandleOrderConfirmedPublic(ctx, publicEvent)
 	})
 
@@ -64,7 +74,12 @@ func registerOrderSubscribers(bus *eventbus.WatermillEventBus, app *di.App) {
 			return apperrors.Infrastructure("予期しないイベント型", fmt.Errorf("got %T", event))
 		}
 		publicEvent := order.ToPublicCanceled(canceled)
-		fmt.Printf("[EventBus] OrderCanceled → 公開イベントに変換 (orderID: %s, reason: %s)\n", publicEvent.OrderID, publicEvent.Reason)
+		slog.InfoContext(ctx, "event published",
+			slog.String("event_type", order.EventTypeOrderCanceled),
+			slog.String("action", "convert to public event"),
+			slog.String("order_id", publicEvent.OrderID),
+			slog.String("reason", publicEvent.Reason),
+		)
 		return nil
 	})
 
@@ -73,7 +88,9 @@ func registerOrderSubscribers(bus *eventbus.WatermillEventBus, app *di.App) {
 		if err := app.OrderStateStore.HandleEvent(ctx, event); err != nil {
 			return err
 		}
-		fmt.Println("[EventBus] ItemAdded → Projection 更新")
+		slog.InfoContext(ctx, "projection updated",
+			slog.String("event_type", order.EventTypeItemAdded),
+		)
 		return nil
 	})
 }

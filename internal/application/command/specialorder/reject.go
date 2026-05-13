@@ -2,6 +2,7 @@ package specialorder
 
 import (
 	"context"
+	"log/slog"
 
 	"mendo/internal/apperrors"
 	"mendo/internal/domain"
@@ -32,5 +33,7 @@ func (uc *RejectSpecialOrderUsecase) Execute(ctx context.Context, id, reason, su
 	if err := uc.publisher.Publish(ctx, so.DomainEvents()...); err != nil {
 		return err
 	}
+
+	slog.InfoContext(ctx, "special order rejected", slog.String("special_order_id", id), slog.String("reason", reason))
 	return nil
 }

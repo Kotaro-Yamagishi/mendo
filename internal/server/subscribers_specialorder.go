@@ -3,6 +3,7 @@ package server
 import (
 	"context"
 	"fmt"
+	"log/slog"
 
 	"mendo/internal/apperrors"
 	"mendo/internal/domain/contract"
@@ -20,7 +21,11 @@ func registerSpecialOrderSubscribers(bus *eventbus.WatermillEventBus, app *di.Ap
 			return apperrors.Infrastructure("予期しないイベント型", fmt.Errorf("got %T", event))
 		}
 		publicEvent := contract.OrderConfirmedPublic{OrderID: dispatched.OrderID}
-		fmt.Printf("[ProcessManager] CookingDispatched → Kitchen BC に調理指示 (orderID: %s)\n", dispatched.OrderID)
+		slog.InfoContext(ctx, "process manager",
+			slog.String("event_type", specialorder.EventTypeCookingDispatched),
+			slog.String("action", "dispatch to kitchen"),
+			slog.String("order_id", dispatched.OrderID),
+		)
 		return app.StartCookingUC.HandleOrderConfirmedPublic(ctx, publicEvent)
 	})
 
@@ -30,7 +35,12 @@ func registerSpecialOrderSubscribers(bus *eventbus.WatermillEventBus, app *di.Ap
 		if !ok {
 			return apperrors.Infrastructure("予期しないイベント型", fmt.Errorf("got %T", event))
 		}
-		fmt.Printf("[ProcessManager] 特別注文却下 → お客さんに通知 (reason: %s, suggested: %s)\n", rejected.Reason, rejected.SuggestedMenu)
+		slog.InfoContext(ctx, "process manager",
+			slog.String("event_type", specialorder.EventTypeSpecialOrderRejected),
+			slog.String("action", "notify customer"),
+			slog.String("reason", rejected.Reason),
+			slog.String("suggested_menu", rejected.SuggestedMenu),
+		)
 		return nil
 	})
 }

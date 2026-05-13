@@ -2,6 +2,7 @@ package order
 
 import (
 	"context"
+	"log/slog"
 
 	"mendo/internal/apperrors"
 	"mendo/internal/domain"
@@ -60,5 +61,6 @@ func (uc *ConfirmOrderESUsecase) Execute(ctx context.Context, orderID string) er
 	// 7. イベントをクリア
 	o.ClearEvents()
 
+	slog.InfoContext(ctx, "order confirmed", slog.String("order_id", orderID))
 	return nil
 }

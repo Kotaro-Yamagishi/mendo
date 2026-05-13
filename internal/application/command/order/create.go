@@ -2,6 +2,7 @@ package order
 
 import (
 	"context"
+	"log/slog"
 
 	"mendo/internal/domain"
 	"mendo/internal/domain/menu"
@@ -64,5 +65,6 @@ func (uc *CreateOrderUsecase) Execute(ctx context.Context, input CreateOrderInpu
 	// 7. イベントをクリア
 	o.ClearEvents()
 
+	slog.InfoContext(ctx, "order created", slog.String("order_id", orderID), slog.Int("seat_no", input.SeatNo), slog.Int("item_count", len(input.Items)))
 	return orderID, nil
 }

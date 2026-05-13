@@ -3,6 +3,7 @@ package importworker
 import (
 	"context"
 	"fmt"
+	"log/slog"
 	"sync"
 
 	importjob "mendo/internal/domain/import"
@@ -18,6 +19,7 @@ type Worker struct {
 	menuReader menudomain.Reader
 	menuWriter menudomain.Writer
 	jobCh      chan *importjob.Job
+	logger     *slog.Logger
 }
 
 // NewWorker は Worker を作成する。
@@ -25,12 +27,14 @@ func NewWorker(
 	jobStore *InMemoryJobStore,
 	menuReader menudomain.Reader,
 	menuWriter menudomain.Writer,
+	logger *slog.Logger,
 ) *Worker {
 	return &Worker{
 		jobStore:   jobStore,
 		menuReader: menuReader,
 		menuWriter: menuWriter,
 		jobCh:      make(chan *importjob.Job, 100),
+		logger:     logger,
 	}
 }
 
@@ -46,7 +50,7 @@ func (w *Worker) Start(ctx context.Context) {
 			}
 		}
 	}()
-	fmt.Println("[ImportWorker] started")
+	w.logger.Info("import worker started")
 }
 
 // Enqueue はジョブをキューに投入する。
@@ -55,13 +59,19 @@ func (w *Worker) Enqueue(job *importjob.Job) {
 }
 
 func (w *Worker) processJob(ctx context.Context, job *importjob.Job) {
-	fmt.Printf("[ImportWorker] processing job %s (%d rows)\n", job.ID, job.TotalRows)
+	w.logger.InfoContext(ctx, "import job processing",
+		slog.String("job_id", string(job.ID)),
+		slog.Int("total_rows", job.TotalRows),
+	)
 	job.Start()
 
 	// 既存メニュー名を一括取得（外部アクセス1回）
 	existingMenus, err := w.menuReader.FindAll(ctx)
 	if err != nil {
-		fmt.Printf("[ImportWorker] failed to load menus: %v\n", err)
+		w.logger.ErrorContext(ctx, "import job failed to load menus",
+			slog.String("job_id", string(job.ID)),
+			slog.Any("error", err),
+		)
 		job.Complete()
 		return
 	}
@@ -92,7 +102,10 @@ func (w *Worker) processJob(ctx context.Context, job *importjob.Job) {
 	wg.Wait()
 
 	job.Complete()
-	fmt.Printf("[ImportWorker] job %s completed: %s\n", job.ID, job.Summary())
+	w.logger.InfoContext(ctx, "import job completed",
+		slog.String("job_id", string(job.ID)),
+		slog.String("summary", job.Summary()),
+	)
 }
 
 func (w *Worker) processChunk(

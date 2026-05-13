@@ -61,7 +61,7 @@ type AppError struct {
 	Message  string         // 人間可読メッセージ（ユーザー向け）
 	Cause    error          // 元エラー（ログ用。ユーザーには見せない）
 	Details  map[string]any // 構造化コンテキスト（ログ用）
-	TraceID  string         // 分散トレーシング用
+	CorrelationID string         // 分散トレーシング用
 }
 
 func (e *AppError) Error() string {

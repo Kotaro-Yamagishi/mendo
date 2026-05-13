@@ -152,6 +152,12 @@ linters-settings:
       - all
       - "-SA1019"
 
+  sloglint:
+    # slog.String("key", val) 形式に統一し、キーと値のペアの一貫性を強制する
+    kv-only: true
+    # context 引数付きメソッドは強制しない（goroutine 起動時等 ctx がない場合があるため）
+    context: ""
+
 linters:
   disable-all: true
   enable:
@@ -184,6 +190,7 @@ linters:
     - ireturn           # IF を返す関数を検知（具体型を返すイディオム強制）
     - wrapcheck          # 外部パッケージのエラーを wrap してるかチェック
     - forbidigo           # ハードコーディング禁止パターン
+    - sloglint            # slog のキーと値ペアの一貫性チェック
 
 issues:
   exclude-rules:

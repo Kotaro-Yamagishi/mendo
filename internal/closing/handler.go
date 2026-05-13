@@ -17,7 +17,7 @@ func NewHandler() *Handler {
 func (h *Handler) HandleCloseShop(w http.ResponseWriter, r *http.Request) error {
 	// 本番では DB から未完了注文 ID を取得する
 	// 学習用なので空リスト
-	canceledCount, err := CloseShop([]string{})
+	canceledCount, err := CloseShop(r.Context(), []string{})
 	if err != nil {
 		return err
 	}

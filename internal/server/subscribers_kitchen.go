@@ -3,6 +3,7 @@ package server
 import (
 	"context"
 	"fmt"
+	"log/slog"
 
 	"mendo/internal/apperrors"
 	"mendo/internal/di"
@@ -20,7 +21,11 @@ func registerKitchenSubscribers(bus *eventbus.WatermillEventBus, app *di.App) {
 		if !ok {
 			return apperrors.Infrastructure("予期しないイベント型", fmt.Errorf("got %T", event))
 		}
-		fmt.Printf("[EventBus] CookingCompleted → 提供通知 + ボード更新 (orderID: %s)\n", completed.OrderID)
+		slog.InfoContext(ctx, "event received",
+			slog.String("event_type", kitchen.EventTypeCookingCompleted),
+			slog.String("action", "notify serving and update board"),
+			slog.String("order_id", string(completed.OrderID)),
+		)
 		return nil
 	})
 
@@ -30,7 +35,12 @@ func registerKitchenSubscribers(bus *eventbus.WatermillEventBus, app *di.App) {
 		if !ok {
 			return apperrors.Infrastructure("予期しないイベント型", fmt.Errorf("got %T", event))
 		}
-		fmt.Printf("[Saga] CookingRejected → 補償アクション: Order をキャンセル (orderID: %s, reason: %s)\n", rejected.OrderID, rejected.Reason)
+		slog.InfoContext(ctx, "saga compensation",
+			slog.String("event_type", kitchen.EventTypeCookingRejected),
+			slog.String("action", "cancel order"),
+			slog.String("order_id", rejected.OrderID),
+			slog.String("reason", rejected.Reason),
+		)
 		return app.CancelOrderUC.Execute(ctx, rejected.OrderID, "厨房フル稼働のため自動キャンセル")
 	})
 }

@@ -2,6 +2,7 @@ package kitchen
 
 import (
 	"context"
+	"log/slog"
 
 	"mendo/internal/domain"
 	"mendo/internal/domain/kitchen"
@@ -56,5 +57,6 @@ func (uc *CompleteCookingUsecase) Execute(ctx context.Context, orderID order.Ord
 		return err // トランザクション内の AppError をそのまま返す
 	}
 
+	slog.InfoContext(ctx, "cooking completed", slog.String("kitchen_id", string(uc.kitchenID)))
 	return nil
 }

@@ -2,6 +2,7 @@ package menu
 
 import (
 	"context"
+	"log/slog"
 
 	"mendo/internal/domain/menu"
 )
@@ -28,5 +29,7 @@ func (uc *SoldOutMenuUsecase) Execute(ctx context.Context, menuID menu.MenuID) e
 	if err := uc.menuWriter.Save(ctx, m); err != nil {
 		return err
 	}
+
+	slog.InfoContext(ctx, "menu sold out", slog.String("menu_id", string(menuID)))
 	return nil
 }

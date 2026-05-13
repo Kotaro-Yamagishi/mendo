@@ -2,6 +2,7 @@ package dlq
 
 import (
 	"context"
+	"log/slog"
 
 	"mendo/internal/apperrors"
 	"mendo/internal/domain"
@@ -27,5 +28,7 @@ func (uc *RetryDLQUsecase) Execute(ctx context.Context, id string) error {
 	if err := uc.dlq.Remove(ctx, id); err != nil {
 		return err
 	}
+
+	slog.InfoContext(ctx, "dead letter retried", slog.String("dead_letter_id", id))
 	return nil
 }

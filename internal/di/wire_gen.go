@@ -7,6 +7,8 @@
 package di
 
 import (
+	"log/slog"
+
 	kitchencommand "mendo/internal/application/command/kitchen"
 	menucommand "mendo/internal/application/command/menu"
 	ordercommand "mendo/internal/application/command/order"
@@ -33,11 +35,12 @@ type App struct {
 	OrderStateStore     *repository.InMemoryOrderStateStore
 	OutboxRelay         *infraoutbox.RelayService
 	ImportWorker        *importworker.Worker
+	Logger              *slog.Logger
 }
 
 // InitializeApp は全レイヤーの依存関係を組み立てる。
 // wire.go の定義から自動生成される。
-func InitializeApp(kitchenID kitchen.KitchenID, eventBus domain.EventPublisher, dlqStore *repository.InMemoryDLQ) (*App, error) {
+func InitializeApp(kitchenID kitchen.KitchenID, eventBus domain.EventPublisher, dlqStore *repository.InMemoryDLQ, logger *slog.Logger) (*App, error) {
 	// --- インフラ層: リポジトリ実装 ---
 	inMemoryMenuRepository := provideMenuRepository()
 	inMemoryKitchenRepository := provideKitchenRepository()
@@ -54,7 +57,7 @@ func InitializeApp(kitchenID kitchen.KitchenID, eventBus domain.EventPublisher, 
 
 	// --- インフラ層: Outbox ---
 	inMemoryOutbox := provideOutbox()
-	relayService := provideRelayService(inMemoryOutbox, eventBus)
+	relayService := provideRelayService(inMemoryOutbox, eventBus, logger)
 
 	// --- インフラ層: TransactionManager ---
 	inMemoryTransactionManager := provideTransactionManager()
@@ -84,7 +87,7 @@ func InitializeApp(kitchenID kitchen.KitchenID, eventBus domain.EventPublisher, 
 
 	// --- インフラ層: インポートジョブストア + ワーカー ---
 	jobStore := importworker.NewInMemoryJobStore()
-	worker := importworker.NewWorker(jobStore, inMemoryMenuRepository, inMemoryMenuRepository)
+	worker := importworker.NewWorker(jobStore, inMemoryMenuRepository, inMemoryMenuRepository, logger)
 
 	// --- アプリケーション層: インポートユースケース ---
 	importMenusUsecase := menucommand.NewImportMenusUsecase(jobStore, worker)
@@ -112,6 +115,7 @@ func InitializeApp(kitchenID kitchen.KitchenID, eventBus domain.EventPublisher, 
 		OrderStateStore:     orderStateStore,
 		OutboxRelay:         relayService,
 		ImportWorker:        worker,
+		Logger:              logger,
 	}
 	return app, nil
 }

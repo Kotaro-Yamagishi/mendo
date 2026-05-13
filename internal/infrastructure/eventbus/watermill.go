@@ -3,6 +3,7 @@ package eventbus
 import (
 	"context"
 	"fmt"
+	"log/slog"
 	"time"
 
 	"github.com/google/uuid"
@@ -17,19 +18,24 @@ type WatermillEventBus struct {
 	handlers   map[string][]EventHandler
 	dlq        domain.DeadLetterQueue
 	maxRetries int
+	logger     *slog.Logger
 }
 
-func NewWatermillEventBus(dlq domain.DeadLetterQueue, maxRetries int) *WatermillEventBus {
+func NewWatermillEventBus(dlq domain.DeadLetterQueue, maxRetries int, logger *slog.Logger) *WatermillEventBus {
 	return &WatermillEventBus{
 		handlers:   make(map[string][]EventHandler),
 		dlq:        dlq,
 		maxRetries: maxRetries,
+		logger:     logger,
 	}
 }
 
 func (b *WatermillEventBus) Publish(ctx context.Context, events ...domain.Event) error {
 	for _, event := range events {
-		fmt.Printf("[EventBus] Published: %s\n", event.GetEventType())
+		b.logger.InfoContext(ctx, "event published",
+			slog.String("event_type", event.GetEventType()),
+			slog.String("aggregate_id", event.GetAggregateID()),
+		)
 		eventType := event.GetEventType()
 		for i, handler := range b.handlers[eventType] {
 			handlerName := fmt.Sprintf("%s_handler_%d", eventType, i)
@@ -37,7 +43,12 @@ func (b *WatermillEventBus) Publish(ctx context.Context, events ...domain.Event)
 			for attempt := 1; attempt <= b.maxRetries; attempt++ {
 				if err := handler(ctx, event); err != nil {
 					lastErr = err
-					fmt.Printf("[EventBus] Retry %d/%d for %s: %v\n", attempt, b.maxRetries, handlerName, err)
+					b.logger.WarnContext(ctx, "event handler retry",
+						slog.Int("attempt", attempt),
+						slog.Int("max_retries", b.maxRetries),
+						slog.String("handler", handlerName),
+						slog.String("error", err.Error()),
+					)
 					continue
 				}
 				lastErr = nil
@@ -55,7 +66,12 @@ func (b *WatermillEventBus) Publish(ctx context.Context, events ...domain.Event)
 				if dlqErr := b.dlq.Store(ctx, letter); dlqErr != nil {
 					return apperrors.Infrastructure("DLQ への保存に失敗", dlqErr)
 				}
-				fmt.Printf("[EventBus] → DLQ: %s (handler: %s, error: %s)\n", eventType, handlerName, lastErr.Error())
+				b.logger.ErrorContext(ctx, "event sent to DLQ",
+					slog.String("event_type", eventType),
+					slog.String("handler", handlerName),
+					slog.String("error", lastErr.Error()),
+					slog.Int("fail_count", b.maxRetries),
+				)
 			}
 		}
 	}

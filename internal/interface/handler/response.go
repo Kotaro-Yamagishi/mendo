@@ -2,7 +2,7 @@ package handler
 
 import (
 	"encoding/json"
-	"log"
+	"log/slog"
 	"net/http"
 
 	"mendo/internal/apperrors"
@@ -17,7 +17,7 @@ func WriteSuccess(w http.ResponseWriter, status int, data interface{}) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(status)
 	if err := json.NewEncoder(w).Encode(successResponse{Data: data}); err != nil {
-		log.Printf("failed to write response: %v", err)
+		slog.Error("failed to write response", "error", err)
 	}
 }
 

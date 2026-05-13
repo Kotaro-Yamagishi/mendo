@@ -1,6 +1,7 @@
 package di
 
 import (
+	"log/slog"
 	"time"
 
 	"github.com/google/wire"
@@ -65,8 +66,8 @@ func provideTransactionManager() *repository.InMemoryTransactionManager {
 	return repository.NewInMemoryTransactionManager()
 }
 
-func provideRelayService(ob *repository.InMemoryOutbox, pub domain.EventPublisher) *infraoutbox.RelayService {
-	return infraoutbox.NewRelayService(ob, pub, 500*time.Millisecond)
+func provideRelayService(ob *repository.InMemoryOutbox, pub domain.EventPublisher, logger *slog.Logger) *infraoutbox.RelayService {
+	return infraoutbox.NewRelayService(ob, pub, 500*time.Millisecond, logger)
 }
 
 // --- ドメインサービス ---
