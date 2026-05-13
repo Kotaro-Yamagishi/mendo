@@ -16,17 +16,22 @@ func NewKitchenHandler(completeCookingUC *kitchencommand.CompleteCookingUsecase)
 	return &KitchenHandler{completeCookingUC: completeCookingUC}
 }
 
+type completeCookingRequest struct {
+	OrderID string `json:"order_id" validate:"required"`
+}
+
 // HandleCompleteCooking は POST /kitchen/complete のハンドラ。
 // 厨房スタッフが調理完了ボタンを押した時に呼ばれる。
 func (h *KitchenHandler) HandleCompleteCooking(w http.ResponseWriter, r *http.Request) error {
-	var body struct {
-		OrderID string `json:"order_id"`
+	var req completeCookingRequest
+	if err := readJSON(r, &req); err != nil {
+		return err
 	}
-	if err := readJSON(r, &body); err != nil {
+	if err := validateInput(req); err != nil {
 		return err
 	}
 
-	if err := h.completeCookingUC.Execute(r.Context(), order.OrderID(body.OrderID)); err != nil {
+	if err := h.completeCookingUC.Execute(r.Context(), order.OrderID(req.OrderID)); err != nil {
 		return err
 	}
 

@@ -43,6 +43,12 @@ func (so *SpecialOrder) Approve() error {
 
 // Reject は店長が却下する。
 func (so *SpecialOrder) Reject(reason, suggestedMenu string) error {
+	if reason == "" {
+		return apperrors.Domain(ErrCodeEmptyReason, "却下理由は必須です")
+	}
+	if suggestedMenu == "" {
+		return apperrors.Domain(ErrCodeEmptySuggestedMenu, "代替メニューの提案は必須です")
+	}
 	if so.status != StatusPending {
 		return apperrors.Domain(ErrCodeNotPending, "承認待ち状態のみ却下できます")
 	}
@@ -54,6 +60,9 @@ func (so *SpecialOrder) Reject(reason, suggestedMenu string) error {
 
 // ResubmitWithMenu は却下後に別メニューで再申請する。再度承認待ちに戻る。
 func (so *SpecialOrder) ResubmitWithMenu(newMenuName string) error {
+	if newMenuName == "" {
+		return apperrors.Domain(ErrCodeEmptyMenuName, "メニュー名は必須です")
+	}
 	if so.status != StatusRejected {
 		return apperrors.Domain(ErrCodeInvalidStatus, "却下済みのみ再申請できます")
 	}

@@ -19,6 +19,9 @@ func NewKitchen(id KitchenID) *Kitchen {
 
 // AddCookingTask は調理タスクを追加する。OrderConfirmed イベントの購読者から呼ばれる。
 func (k *Kitchen) AddCookingTask(orderID order.OrderID, instructions []CookingInstruction) error {
+	if len(instructions) == 0 {
+		return apperrors.Domain(ErrCodeEmptyInstructions, "調理指示は1つ以上必要です")
+	}
 	// 業務ルール: 同時調理数の上限チェック
 	activeTasks := 0
 	for _, t := range k.tasks {

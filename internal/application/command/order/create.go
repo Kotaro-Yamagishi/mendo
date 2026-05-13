@@ -37,32 +37,42 @@ func (uc *CreateOrderUsecase) Execute(ctx context.Context, input CreateOrderInpu
 	// 1. 注文 ID を生成
 	orderID := order.NewOrderID().String()
 
-	// 2. 注文集約を生成（OrderCreated イベントが uncommitted に積まれる）
-	o := order.Create(orderID, input.SeatNo)
+	// 2. 座席番号をバリデート
+	seatNo, err := order.NewSeatNumber(input.SeatNo)
+	if err != nil {
+		return "", err
+	}
 
-	// 3. 注文明細を追加（ItemAdded イベントが uncommitted に積まれる）
+	// 3. 注文集約を生成（OrderCreated イベントが uncommitted に積まれる）
+	o := order.Create(orderID, seatNo)
+
+	// 4. 注文明細を追加（ItemAdded イベントが uncommitted に積まれる）
 	for _, itemInput := range input.Items {
-		if err := o.AddItem(menu.MenuID(itemInput.MenuID), itemInput.Toppings, itemInput.Hardness); err != nil {
+		hardness, err := order.NewHardness(itemInput.Hardness)
+		if err != nil {
+			return "", err
+		}
+		if err := o.AddItem(menu.MenuID(itemInput.MenuID), itemInput.Toppings, hardness); err != nil {
 			return "", err // domain の AppError をそのまま返す
 		}
 	}
 
-	// 4. 未コミットイベントをイベントストアに保存
+	// 5. 未コミットイベントをイベントストアに保存
 	if err := uc.eventStore.Save(ctx, o.UncommittedEvents()); err != nil {
 		return "", err
 	}
 
-	// 5. Outbox にイベントを保存
+	// 6. Outbox にイベントを保存
 	if err := uc.outbox.Store(ctx, o.UncommittedEvents()); err != nil {
 		return "", err
 	}
 
-	// 6. EventBus に Publish（Projection 更新や後続ユースケースの起動）
+	// 7. EventBus に Publish（Projection 更新や後続ユースケースの起動）
 	if err := uc.publisher.Publish(ctx, o.UncommittedEvents()...); err != nil {
 		return "", err
 	}
 
-	// 7. イベントをクリア
+	// 8. イベントをクリア
 	o.ClearEvents()
 
 	slog.InfoContext(ctx, "order created", slog.String("order_id", orderID), slog.Int("seat_no", input.SeatNo), slog.Int("item_count", len(input.Items)))

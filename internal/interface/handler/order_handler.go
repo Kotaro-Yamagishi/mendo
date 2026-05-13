@@ -33,11 +33,42 @@ func NewOrderHandler(
 	}
 }
 
+type createOrderRequest struct {
+	SeatNo int                    `json:"seat_no" validate:"required,min=1"`
+	Items  []createOrderItemRequest `json:"items"   validate:"required,min=1,dive"`
+}
+
+type createOrderItemRequest struct {
+	MenuID   string   `json:"menu_id"  validate:"required"`
+	Toppings []string `json:"toppings"`
+	Hardness string   `json:"hardness"`
+}
+
+type cancelOrderRequest struct {
+	Reason string `json:"reason" validate:"required"`
+}
+
 // HandleCreate は POST /orders のハンドラ。食券機から注文を作成する。
 func (h *OrderHandler) HandleCreate(w http.ResponseWriter, r *http.Request) error {
-	var input ordercommand.CreateOrderInput
-	if err := readJSON(r, &input); err != nil {
+	var req createOrderRequest
+	if err := readJSON(r, &req); err != nil {
 		return err
+	}
+	if err := validateInput(req); err != nil {
+		return err
+	}
+
+	items := make([]ordercommand.CreateOrderItemInput, len(req.Items))
+	for i, item := range req.Items {
+		items[i] = ordercommand.CreateOrderItemInput{
+			MenuID:   item.MenuID,
+			Toppings: item.Toppings,
+			Hardness: item.Hardness,
+		}
+	}
+	input := ordercommand.CreateOrderInput{
+		SeatNo: req.SeatNo,
+		Items:  items,
 	}
 
 	orderID, err := h.createUC.Execute(r.Context(), input)
@@ -65,14 +96,15 @@ func (h *OrderHandler) HandleConfirm(w http.ResponseWriter, r *http.Request) err
 func (h *OrderHandler) HandleCancel(w http.ResponseWriter, r *http.Request) error {
 	orderID := r.PathValue("id")
 
-	var body struct {
-		Reason string `json:"reason"`
+	var req cancelOrderRequest
+	if err := readJSON(r, &req); err != nil {
+		return err
 	}
-	if err := readJSON(r, &body); err != nil {
+	if err := validateInput(req); err != nil {
 		return err
 	}
 
-	if err := h.cancelUC.Execute(r.Context(), orderID, body.Reason); err != nil {
+	if err := h.cancelUC.Execute(r.Context(), orderID, req.Reason); err != nil {
 		return err
 	}
 

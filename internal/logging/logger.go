@@ -46,8 +46,8 @@ func (h *correlationHandler) Enabled(ctx context.Context, level slog.Level) bool
 }
 
 func (h *correlationHandler) Handle(ctx context.Context, r slog.Record) error {
-	r.AddAttrs(slog.String("correlation_id", id))
 	if id := GetCorrelationID(ctx); id != "" {
+		r.AddAttrs(slog.String("correlation_id", id))
 	}
 	return h.inner.Handle(ctx, r)
 }

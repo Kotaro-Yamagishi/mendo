@@ -36,7 +36,7 @@ func Test_OrderHandler_HandleCreate(t *testing.T) {
 	}{
 		{
 			name:       "正常系",
-			body:       `{"SeatNo":3,"Items":[{"MenuID":"menu-1","Toppings":["ネギ"],"Hardness":"普通"}]}`,
+			body:       `{"seat_no":3,"items":[{"menu_id":"menu-1","toppings":["ネギ"],"hardness":"ふつう"}]}`,
 			wantStatus: http.StatusCreated,
 		},
 		{

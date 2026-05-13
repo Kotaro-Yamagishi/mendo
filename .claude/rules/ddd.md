@@ -272,6 +272,25 @@ if err != nil {
 - ErrorMiddleware が最終ハンドラとして1回だけ処理する
 - application 層や repository 層でログを出さない
 
+## バリデーション
+
+### 各層の責務
+- **handler**: 入力形式の検証。全フィールドをチェックして `ValidationWithFields` でまとめて返す
+- **値オブジェクト**: ドメインの制約。`New*` コンストラクタでバリデーション
+- **集約**: 状態に依存するルール。引数チェック → 状態遷移チェックの順
+- **application**: バリデーションしない
+
+### handler のバリデーション
+- `readJSON` 直後に `validate*` 関数を呼ぶ
+- 全フィールドをチェックしてからまとめてエラーを返す（1つ引っかかっても止めない）
+- 配列要素は `items[0].menu_id` のようにインデックス付きフィールド名
+- validate 関数は handler ファイル内に private 関数として定義
+
+### 値オブジェクト
+- 全ての値オブジェクトに `New*` コンストラクタを用意
+- `apperrors.Domain` で返す（Validation ではない）
+- ID 型（`type XxxID string`）はバリデーション不要
+
 ## ログ
 
 ### 設計方針

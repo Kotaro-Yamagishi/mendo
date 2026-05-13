@@ -19,21 +19,28 @@ func NewImportHandler(iu *menucommand.ImportMenusUsecase, su *importstatus.Impor
 	return &ImportHandler{importUC: iu, statusUC: su}
 }
 
+type importMenusRequest struct {
+	Items []importMenuItemRequest `json:"items" validate:"required,min=1,dive"`
+}
+
+type importMenuItemRequest struct {
+	MenuName string `json:"menu_name" validate:"required"`
+	Price    int    `json:"price"     validate:"gte=0"`
+}
+
 // HandleImportMenus は POST /admin/import/menus のハンドラ。
 // CSV を受け取ってジョブを作成し、即座に「受付完了」を返す。
 func (h *ImportHandler) HandleImportMenus(w http.ResponseWriter, r *http.Request) error {
-	var body struct {
-		Items []struct {
-			MenuName string `json:"menu_name"`
-			Price    int    `json:"price"`
-		} `json:"items"`
+	var req importMenusRequest
+	if err := readJSON(r, &req); err != nil {
+		return err
 	}
-	if err := readJSON(r, &body); err != nil {
+	if err := validateInput(req); err != nil {
 		return err
 	}
 
-	rows := make([]importjob.ImportRow, len(body.Items))
-	for i, item := range body.Items {
+	rows := make([]importjob.ImportRow, len(req.Items))
+	for i, item := range req.Items {
 		rows[i] = importjob.ImportRow{MenuName: item.MenuName, Price: item.Price}
 	}
 

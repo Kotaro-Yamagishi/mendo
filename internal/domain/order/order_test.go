@@ -19,7 +19,7 @@ func Test_Create(t *testing.T) {
 	t.Parallel()
 
 	// When: 注文を作成する
-	o := order.Create("order-1", 3)
+	o := order.Create("order-1", order.SeatNumber(3))
 
 	// Then: pending 状態で作成され、OrderCreated イベントが1つ発行される
 	assert.Equal(t, "order-1", o.ID())
@@ -45,20 +45,20 @@ func Test_AddItem_正常系(t *testing.T) {
 	tests := []struct {
 		name     string
 		toppings []string
-		hardness string
+		hardness order.Hardness
 	}{
 		// 境界値: トッピング0個。最小値。
-		{"トッピングなし", nil, "普通"},
+		{"トッピングなし", nil, order.HardnessFutsuu},
 		// 境界値: トッピング3個。上限ちょうど。
 		// ルールが「3つまで」なので、3はOK、4がNGの境界。
-		{"トッピング3個_上限", []string{"ネギ", "チャーシュー", "味玉"}, "硬め"},
+		{"トッピング3個_上限", []string{"ネギ", "チャーシュー", "味玉"}, order.HardnessKatame},
 		// 代表値: トッピング1個。典型的な入力。
-		{"トッピング1個", []string{"ネギ"}, "柔らかめ"},
+		{"トッピング1個", []string{"ネギ"}, order.HardnessYawarakame},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
-			o := order.Create("order-1", 1)
+			o := order.Create("order-1", order.SeatNumber(1))
 			initialEventCount := len(o.UncommittedEvents())
 
 			err := o.AddItem(menu.MenuID("menu-1"), tt.toppings, tt.hardness)
@@ -89,10 +89,10 @@ func Test_AddItem_異常系(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
-			o := order.Create("order-1", 1)
+			o := order.Create("order-1", order.SeatNumber(1))
 			initialEventCount := len(o.UncommittedEvents())
 
-			err := o.AddItem(menu.MenuID("menu-1"), tt.toppings, "普通")
+			err := o.AddItem(menu.MenuID("menu-1"), tt.toppings, order.HardnessFutsuu)
 
 			require.ErrorContains(t, err, tt.wantErr)
 			// エラー時はイベントが増えないことを検証。
@@ -170,7 +170,7 @@ func Test_Confirm_アイテム必須(t *testing.T) {
 	t.Parallel()
 
 	// Given: pending だがアイテムなし
-	o := order.Create("order-1", 1)
+	o := order.Create("order-1", order.SeatNumber(1))
 
 	// When
 	err := o.Confirm()
@@ -311,7 +311,7 @@ func Test_ClearEvents(t *testing.T) {
 	t.Parallel()
 
 	// Given: イベントが溜まっている注文
-	o := order.Create("order-1", 1)
+	o := order.Create("order-1", order.SeatNumber(1))
 	require.NotEmpty(t, o.UncommittedEvents())
 
 	// When: イベントをクリア（Save 後に呼ばれる想定）
@@ -337,8 +337,8 @@ func Test_ClearEvents(t *testing.T) {
 // newPendingWithItems は pending 状態でアイテムが1つある注文を作る。
 func newPendingWithItems(t *testing.T) *order.Order {
 	t.Helper()
-	o := order.Create("order-1", 1)
-	err := o.AddItem(menu.MenuID("menu-1"), []string{"ネギ"}, "普通")
+	o := order.Create("order-1", order.SeatNumber(1))
+	err := o.AddItem(menu.MenuID("menu-1"), []string{"ネギ"}, order.HardnessFutsuu)
 	require.NoError(t, err)
 	return o
 }

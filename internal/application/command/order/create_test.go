@@ -23,7 +23,7 @@ func Test_CreateOrder_正常系(t *testing.T) {
 	input := apporder.CreateOrderInput{
 		SeatNo: 3,
 		Items: []apporder.CreateOrderItemInput{
-			{MenuID: "menu-1", Toppings: []string{"ネギ"}, Hardness: "普通"},
+			{MenuID: "menu-1", Toppings: []string{"ネギ"}, Hardness: "ふつう"},
 		},
 	}
 
@@ -53,7 +53,7 @@ func Test_CreateOrder_トッピング上限超過(t *testing.T) {
 	input := apporder.CreateOrderInput{
 		SeatNo: 1,
 		Items: []apporder.CreateOrderItemInput{
-			{MenuID: "menu-1", Toppings: []string{"a", "b", "c", "d"}, Hardness: "普通"},
+			{MenuID: "menu-1", Toppings: []string{"a", "b", "c", "d"}, Hardness: "ふつう"},
 		},
 	}
 

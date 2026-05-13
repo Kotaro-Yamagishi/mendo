@@ -67,22 +67,22 @@ func (o *Order) apply(event domain.Event) {
 // --- コマンド（業務ルール + イベント発行）---
 
 // Create は注文を作成する。
-func Create(orderID string, seatNo int) *Order {
+func Create(orderID string, seatNo SeatNumber) *Order {
 	o := &Order{}
-	event := NewOrderCreated(orderID, seatNo, "")
+	event := NewOrderCreated(orderID, int(seatNo), "")
 	o.apply(event)
 	o.uncommittedEvents = append(o.uncommittedEvents, event)
 	return o
 }
 
 // AddItem は注文に商品を追加する。
-func (o *Order) AddItem(menuID menu.MenuID, toppings []string, hardness string) error {
+func (o *Order) AddItem(menuID menu.MenuID, toppings []string, hardness Hardness) error {
 	// 業務ルール: トッピングは3つまで
 	if len(toppings) > 3 {
 		return apperrors.Domain(ErrCodeTooManyToppings, "トッピングは3つまでです")
 	}
 
-	event := NewItemAdded(o.id, menuID, toppings, hardness, "")
+	event := NewItemAdded(o.id, menuID, toppings, string(hardness), "")
 	o.apply(event)
 	o.uncommittedEvents = append(o.uncommittedEvents, event)
 	return nil
@@ -114,6 +114,9 @@ func (o *Order) Confirm() error {
 
 // Cancel は注文をキャンセルする。
 func (o *Order) Cancel(reason string) error {
+	if reason == "" {
+		return apperrors.Domain(ErrCodeEmptyReason, "キャンセル理由は必須です")
+	}
 	if o.status != StatusConfirmed {
 		return apperrors.Domain(ErrCodeNotConfirmed, "確定済みのみキャンセルできます")
 	}
