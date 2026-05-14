@@ -16,5 +16,14 @@ services:
       --character-set-server=utf8mb4
       --collation-server=utf8mb4_unicode_ci
 
+  jaeger:
+    image: jaegertracing/all-in-one:1.62
+    container_name: mendo-jaeger
+    environment:
+      - COLLECTOR_OTLP_ENABLED=true
+    ports:
+      - "16686:16686"   # Jaeger UI
+      - "4318:4318"     # OTLP HTTP receiver
+
 volumes:
   mysql-data:

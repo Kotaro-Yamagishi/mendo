@@ -2,7 +2,7 @@
 
 Go + DDD + Clean Architecture のリファレンス実装
 
-[![Go](https://img.shields.io/badge/Go-1.24-00ADD8?style=flat-square&logo=go)](https://go.dev/)
+[![Go](https://img.shields.io/badge/Go-1.25-00ADD8?style=flat-square&logo=go)](https://go.dev/)
 [![Architecture](https://img.shields.io/badge/Architecture-Clean-brightgreen?style=flat-square)](https://blog.cleancoder.com/uncle-bob/2012/08/13/the-clean-architecture.html)
 [![DDD](https://img.shields.io/badge/DDD-Domain--Driven%20Design-blue?style=flat-square)](https://www.domainlanguage.com/ddd/)
 
@@ -25,14 +25,17 @@ Go + DDD + Clean Architecture のリファレンス実装
 
 ## Getting Started
 
-Docker + Go 1.24 が必要。
+Docker + Go 1.25 が必要。
 
 ```bash
-# MySQL 起動
+# MySQL + Jaeger 起動
 docker compose up -d
 
 # アプリ起動
 go run cmd/main.go
+
+# Jaeger UI（トレース可視化）
+open http://localhost:16686
 
 # ビルド確認
 go build ./...
@@ -80,6 +83,20 @@ mendo/
 | [Chapters](docs/chapters.md) | 書籍の章↔コードの対応表 |
 | [Linting](docs/linting.md) | Lint設定、DDD依存ルール、各層の責務 |
 | [ADR-001](docs/adr/001-contract-in-domain.md) | contract/ の配置決定 |
+| [Error Handling](docs/error-handling.md) | AppError設計、各層の責務、二重ラップ禁止 |
+| [Logging](docs/logging.md) | 構造化ログ設計、CorrelationID、各層のログ方針 |
+| [Validation](docs/validation.md) | バリデーション戦略、validator導入、層の分離 |
+
+## 運用基盤
+
+| 機能 | 実装 | 説明 |
+|------|------|------|
+| エラーハンドリング | AppError + ErrorMiddleware | Category → HTTPステータス自動マッピング。二重ラップ禁止 |
+| 構造化ログ | slog + CorrelationID | correlationHandler で全ログに correlation_id 自動付与 |
+| バリデーション | go-playground/validator | handler: struct タグ、値オブジェクト: New*、集約: 状態チェック |
+| Graceful Shutdown | signal + srv.Shutdown | SIGTERM → Readiness落とす → HTTP完了待ち → ワーカー停止 |
+| ヘルスチェック | /health/live, /health/ready | Liveness + Readiness。Kubernetes 対応 |
+| 分散トレーシング | OpenTelemetry + Jaeger | ユースケース単位の span。Jaeger UI で可視化 |
 
 ## Dependency Direction
 
@@ -99,15 +116,15 @@ handler → application → domain ← infrastructure
 - [ ] Schema Registry（Protobuf / Avro）
 
 ### Code Quality
-- [ ] エラーハンドリング設計（Domain / Application / Infrastructure Error の分離）
-- [ ] 構造化ログ（slog + CorrelationID）
-- [ ] バリデーション戦略
-- [ ] Graceful Shutdown + ヘルスチェック
-- [ ] OpenTelemetry（分散トレーシング）
+- [x] エラーハンドリング設計（Domain / Application / Infrastructure Error の分離）
+- [x] 構造化ログ（slog + CorrelationID）
+- [x] バリデーション戦略
+- [x] Graceful Shutdown + ヘルスチェック
+- [x] OpenTelemetry（分散トレーシング）
 
 ### Testing
-- [ ] 集約の単体テスト
-- [ ] E2E テスト（Docker Compose）
+- [x] 集約の単体テスト
+- [x] E2E テスト（Docker Compose）
 - [ ] Testcontainers
 
 ### Documentation
@@ -126,3 +143,6 @@ handler → application → domain ← infrastructure
 ### ライブラリ
 - [Google Wire](https://github.com/google/wire) — DI
 - [golangci-lint](https://golangci-lint.run/) — Linter
+- [OpenTelemetry Go](https://opentelemetry.io/docs/languages/go/) — 分散トレーシング
+- [Jaeger](https://www.jaegertracing.io/) — トレース可視化
+- [go-playground/validator](https://github.com/go-playground/validator) — バリデーション

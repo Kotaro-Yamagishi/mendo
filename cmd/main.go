@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"log/slog"
 	"os"
 
@@ -10,11 +11,20 @@ import (
 	"mendo/internal/infrastructure/repository"
 	"mendo/internal/logging"
 	"mendo/internal/server"
+	"mendo/internal/telemetry"
 )
 
 func main() {
 	logger := logging.NewLogger()
 	slog.SetDefault(logger)
+
+	// OpenTelemetry 初期化
+	shutdownTracer, err := telemetry.Init(context.Background(), "mendo")
+	if err != nil {
+		logger.Warn("failed to initialize OpenTelemetry, tracing disabled", "error", err)
+	} else {
+		defer shutdownTracer(context.Background())
+	}
 
 	kitchenID := kitchen.KitchenID("kitchen-001")
 	dlqStore := repository.NewInMemoryDLQ()

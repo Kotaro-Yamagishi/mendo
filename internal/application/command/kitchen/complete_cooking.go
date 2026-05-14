@@ -4,6 +4,8 @@ import (
 	"context"
 	"log/slog"
 
+	"go.opentelemetry.io/otel"
+
 	"mendo/internal/domain"
 	"mendo/internal/domain/kitchen"
 	"mendo/internal/domain/order"
@@ -31,6 +33,9 @@ func NewCompleteCookingUsecase(
 }
 
 func (uc *CompleteCookingUsecase) Execute(ctx context.Context, orderID order.OrderID) error {
+	ctx, span := otel.Tracer("mendo").Start(ctx, "CompleteCooking.Execute")
+	defer span.End()
+
 	// 1. 厨房集約をロード
 	k, err := uc.kitchenReader.FindByID(ctx, uc.kitchenID)
 	if err != nil {

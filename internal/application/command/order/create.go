@@ -4,6 +4,8 @@ import (
 	"context"
 	"log/slog"
 
+	"go.opentelemetry.io/otel"
+
 	"mendo/internal/domain"
 	"mendo/internal/domain/menu"
 	"mendo/internal/domain/order"
@@ -34,6 +36,9 @@ func NewCreateOrderUsecase(es domain.EventStore, ob domain.Outbox, pub domain.Ev
 }
 
 func (uc *CreateOrderUsecase) Execute(ctx context.Context, input CreateOrderInput) (string, error) {
+	ctx, span := otel.Tracer("mendo").Start(ctx, "CreateOrder.Execute")
+	defer span.End()
+
 	// 1. 注文 ID を生成
 	orderID := order.NewOrderID().String()
 

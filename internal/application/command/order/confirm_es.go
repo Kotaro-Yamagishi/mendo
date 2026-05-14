@@ -4,6 +4,8 @@ import (
 	"context"
 	"log/slog"
 
+	"go.opentelemetry.io/otel"
+
 	"mendo/internal/apperrors"
 	"mendo/internal/domain"
 	"mendo/internal/domain/order"
@@ -26,6 +28,9 @@ func NewConfirmOrderESUsecase(es domain.EventStore, ob domain.Outbox, pub domain
 }
 
 func (uc *ConfirmOrderESUsecase) Execute(ctx context.Context, orderID string) error {
+	ctx, span := otel.Tracer("mendo").Start(ctx, "ConfirmOrderES.Execute")
+	defer span.End()
+
 	// 1. イベントストアからイベント列をロード
 	events, err := uc.eventStore.Load(ctx, orderID)
 	if err != nil {

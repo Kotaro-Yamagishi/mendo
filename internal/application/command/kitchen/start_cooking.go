@@ -4,6 +4,8 @@ import (
 	"context"
 	"log/slog"
 
+	"go.opentelemetry.io/otel"
+
 	"mendo/internal/domain"
 	"mendo/internal/domain/contract"
 	kitchendomain "mendo/internal/domain/kitchen"
@@ -26,6 +28,9 @@ func NewStartCookingUsecase(kr kitchendomain.Reader, kw kitchendomain.Writer, pu
 // HandleOrderConfirmedPublic は公開イベントを受け取って調理タスクを作る。
 // Order BC の内部イベント構造を知らない。公開イベントに載った調理情報だけ使う。
 func (uc *StartCookingUsecase) HandleOrderConfirmedPublic(ctx context.Context, event contract.OrderConfirmedPublic) error {
+	ctx, span := otel.Tracer("mendo").Start(ctx, "StartCooking.HandleOrderConfirmedPublic")
+	defer span.End()
+
 	// 1. 厨房集約をロード
 	k, err := uc.kitchenReader.FindByID(ctx, uc.kitchenID)
 	if err != nil {

@@ -9,6 +9,8 @@ import (
 	"syscall"
 	"time"
 
+	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
+
 	"mendo/internal/closing"
 	"mendo/internal/di"
 	"mendo/internal/infrastructure/eventbus"
@@ -51,10 +53,13 @@ func Run(app *di.App, bus *eventbus.WatermillEventBus) {
 	// CorrelationMiddleware でラップ
 	httpHandler := logging.CorrelationMiddleware(mux, logger)
 
+	// OTel HTTP 計装でラップ（最外層）
+	otelHandler := otelhttp.NewHandler(httpHandler, "mendo")
+
 	// サーバー設定
 	srv := &http.Server{
 		Addr:         ":8080",
-		Handler:      httpHandler,
+		Handler:      otelHandler,
 		ReadTimeout:  10 * time.Second,
 		WriteTimeout: 10 * time.Second,
 		IdleTimeout:  120 * time.Second,
