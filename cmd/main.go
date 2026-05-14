@@ -1,7 +1,6 @@
 package main
 
 import (
-	"context"
 	"log/slog"
 	"os"
 
@@ -26,8 +25,6 @@ func main() {
 		logger.Error("failed to initialize app", "error", err)
 		os.Exit(1)
 	}
-
-	app.OutboxRelay.Start(context.Background())
 
 	server.Run(app, bus)
 }

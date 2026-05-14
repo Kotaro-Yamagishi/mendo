@@ -11,10 +11,14 @@ import (
 )
 
 // RegisterRoutes は HTTP ルーティングを設定する。
-func RegisterRoutes(mux *http.ServeMux, app *di.App, staffHandler *staff.Handler, closingHandler *closing.Handler, logger *slog.Logger) { //nolint:funlen // ルーティング登録は一覧性を優先して1関数にまとめる
+func RegisterRoutes(mux *http.ServeMux, app *di.App, staffHandler *staff.Handler, closingHandler *closing.Handler, logger *slog.Logger, healthHandler *handler.HealthHandler) { //nolint:funlen // ルーティング登録は一覧性を優先して1関数にまとめる
 	wrap := func(h handler.AppHandlerFunc) http.HandlerFunc {
 		return handler.ErrorMiddleware(h, logger)
 	}
+
+	// ヘルスチェック（ミドルウェア不要）
+	mux.HandleFunc("GET /health/live", healthHandler.HandleLive)
+	mux.HandleFunc("GET /health/ready", healthHandler.HandleReady)
 
 	// 注文関連
 	mux.HandleFunc("POST /orders", wrap(app.OrderHandler.HandleCreate))
