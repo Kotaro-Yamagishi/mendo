@@ -17,12 +17,11 @@ type DomainEvent struct {
 	AggregateID string `json:"aggregate_id"`
 
 	// AggregateType はイベントを発行した集約の種別（"Order", "Kitchen" 等）。
-	// TODO: AggregateTypeってenumとかで制御しなくていいの？
+	// 各集約で定数として定義する（例: order.AggregateTypeOrder）。
 	AggregateType string `json:"aggregate_type"`
 
 	// EventType はイベントの種別（"order.confirmed", "cooking.completed" 等）。
-	// 購読者へのディスパッチキーになる。
-	// TODO: EventTypeってenumとかで制御しなくていいの？
+	// 購読者へのディスパッチキーになる。各集約で定数として定義する。
 	EventType string `json:"event_type"`
 
 	// OccurredAt はイベントが発生した時刻。
